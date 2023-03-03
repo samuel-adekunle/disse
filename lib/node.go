@@ -5,14 +5,12 @@ import (
 	"time"
 )
 
-// Node type, for all nodes in the system
 type Node interface {
 	Init()
 	HandleMessage(Message, Address)
 	HandleTimer(Timer, time.Duration)
 }
 
-// BaseNode
 type BaseNode struct {
 	Address      Address
 	MessageQueue chan MessageTriplet
