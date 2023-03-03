@@ -6,30 +6,34 @@ import (
 )
 
 func main() {
-	nodes := make(map[ds.Address]ds.Node)
-	mq := make(chan ds.MessageTriplet, 10)
-	tq := make(chan ds.TimerTriplet, 10)
-
-	ping, pong := ds.Message("Ping"), ds.Message("Pong")
-	pingCounter := 3
-	pingInterval := 100 * time.Millisecond
-
-	sa := ds.Address("PingServer")
-	nodes[sa] = &PingServer{ds.BaseNode{Address: sa, MessageQueue: mq, TimerQueue: tq}, ping, pong, 0}
-
-	ca := ds.Address("PingClient")
-	nodes[ca] = &PingClient{ds.BaseNode{Address: ca, MessageQueue: mq, TimerQueue: tq}, ping, pong, sa, pingInterval, pingCounter, 0}
-
-	minLatency := 10 * time.Millisecond
-	maxLatency := 50 * time.Millisecond
-	simDuration := 3 * time.Second
-	sim := ds.Simulation{
-		Nodes:        nodes,
-		MessageQueue: mq,
-		TimerQueue:   tq,
-		MinLatency:   minLatency,
-		MaxLatency:   maxLatency,
-		Duration:     simDuration,
+	sim := ds.NewSimulation()
+	pingMessage, pongMessage := ds.Message("Ping"), ds.Message("Pong")
+	serverAddress, clientAddress := ds.Address("PingServer"), ds.Address("PingClient")
+	pingServer := &PingServer{
+		BaseNode: ds.BaseNode{
+			Address:      serverAddress,
+			MessageQueue: sim.MessageQueue,
+			TimerQueue:   sim.TimerQueue,
+		},
+		PingMessage: pingMessage,
+		PongMessage: pongMessage,
+		PingCounter: 0,
 	}
+	pingClient := &PingClient{
+		BaseNode: ds.BaseNode{
+			Address:      clientAddress,
+			MessageQueue: sim.MessageQueue,
+			TimerQueue:   sim.TimerQueue,
+		},
+		PingMessage:   pingMessage,
+		PongMessage:   pongMessage,
+		ServerAddress: serverAddress,
+		PingInterval:  1 * time.Second,
+		PingCounter:   3,
+		PongCounter:   0,
+	}
+	sim.AddNode(serverAddress, pingServer)
+	sim.AddNode(clientAddress, pingClient)
+	sim.Duration = 10 * time.Second
 	sim.Run()
 }

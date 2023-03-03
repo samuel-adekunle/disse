@@ -9,10 +9,24 @@ import (
 	"time"
 )
 
+const (
+	Infinity                 = time.Duration(0)
+	defaultMessageBufferSize = 100
+	defaultTimerBufferSize   = 100
+	defaultMinLatency        = 10 * time.Millisecond
+	defaultMaxLatency        = 100 * time.Millisecond
+	defaultDuration          = Infinity
+)
+
 var logFileName string
 
 func init() {
-	flag.StringVar(&logFileName, "log", "", "path to log file")
+	const (
+		defaultLogFileName = ""
+		logFileNameUsage   = "path to log file"
+	)
+	flag.StringVar(&logFileName, "logfile", defaultLogFileName, "path to log file")
+	flag.StringVar(&logFileName, "l", defaultLogFileName, logFileNameUsage+" (shorthand)")
 }
 
 type Simulation struct {
@@ -24,7 +38,35 @@ type Simulation struct {
 	Duration     time.Duration
 }
 
-const Infinity time.Duration = 0
+type BufferSizes struct {
+	MessageBufferSize int
+	TimerBufferSize   int
+}
+
+func NewSimulation() *Simulation {
+	return NewSimulationWithBuffer(nil)
+}
+
+func NewSimulationWithBuffer(bufferSizes *BufferSizes) *Simulation {
+	if bufferSizes == nil {
+		bufferSizes = &BufferSizes{
+			MessageBufferSize: defaultMessageBufferSize,
+			TimerBufferSize:   defaultTimerBufferSize,
+		}
+	}
+	return &Simulation{
+		Nodes:        make(map[Address]Node),
+		MessageQueue: make(chan MessageTriplet, bufferSizes.MessageBufferSize),
+		TimerQueue:   make(chan TimerTriplet, bufferSizes.TimerBufferSize),
+		MinLatency:   defaultMinLatency,
+		MaxLatency:   defaultMaxLatency,
+		Duration:     defaultDuration,
+	}
+}
+
+func (s *Simulation) AddNode(address Address, node Node) {
+	s.Nodes[address] = node
+}
 
 func (s *Simulation) RandomLatency() time.Duration {
 	return s.MinLatency + time.Duration(rand.Int63n(int64(s.MaxLatency-s.MinLatency)))
