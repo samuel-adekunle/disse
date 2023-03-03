@@ -9,7 +9,7 @@ import (
 type Node interface {
 	Init()
 	HandleMessage(Message, Address)
-	HandleTimer(Timer)
+	HandleTimer(Timer, time.Duration)
 }
 
 // BaseNode
@@ -19,16 +19,16 @@ type BaseNode struct {
 	TimerQueue   chan TimerTriplet
 }
 
-func (n *BaseNode) Init() {
-	panic("implement me")
+func (n *BaseNode) LogInit() {
+	log.Printf("Init(%v)\n", n.Address)
 }
 
-func (n *BaseNode) HandleMessage(message Message, from Address) {
-	panic("implement me")
+func (n *BaseNode) LogHandleMessage(message Message, from Address) {
+	log.Printf("HandleMessage(%v -> %v, %v)\n", from, n.Address, message)
 }
 
-func (n *BaseNode) HandleTimer(timer Timer) {
-	panic("implement me")
+func (n *BaseNode) LogHandleTimer(timer Timer, length time.Duration) {
+	log.Printf("HandleTimer(%v, %v, %v)\n", n.Address, timer, length)
 }
 
 func (n *BaseNode) SendMessage(message Message, to Address) {

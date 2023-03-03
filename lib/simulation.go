@@ -3,6 +3,7 @@ package lib
 import (
 	"log"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 )
@@ -21,8 +22,11 @@ func (s *Simulation) RandomLatency() time.Duration {
 	return s.MinLatency + time.Duration(rand.Int63n(int64(s.MaxLatency-s.MinLatency)))
 }
 
-func (s *Simulation) Run(duration time.Duration) {
+func (s *Simulation) Run(duration time.Duration, logOutput *os.File) {
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
+	log.SetOutput(logOutput)
+
+	log.Printf("Run(%v, %v)", duration, logOutput.Name())
 
 	wg := &sync.WaitGroup{}
 
@@ -36,7 +40,6 @@ func (s *Simulation) Run(duration time.Duration) {
 			wg.Add(1)
 			go func() {
 				time.Sleep(s.RandomLatency())
-				log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 				s.Nodes[mt.To].HandleMessage(mt.Message, mt.From)
 				wg.Done()
 			}()
@@ -44,14 +47,13 @@ func (s *Simulation) Run(duration time.Duration) {
 			wg.Add(1)
 			go func() {
 				time.Sleep(tt.Length)
-				log.Printf("HandleTimer(%v, %v, %v)\n", tt.From, tt.Timer, tt.Length)
-				s.Nodes[tt.From].HandleTimer(tt.Timer)
+				s.Nodes[tt.From].HandleTimer(tt.Timer, tt.Length)
 				wg.Done()
 			}()
 		case <-time.After(duration):
 			if duration != Infinity {
 				wg.Wait()
-				log.Println("Simulation finished")
+				log.Printf("StopAfter(%v)\n", duration)
 				return
 			}
 		}
