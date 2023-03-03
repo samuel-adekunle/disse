@@ -1,6 +1,6 @@
 # Distributed Systems Discrete Event Simulator (DISSE)
 
-A lot of inspiration from DS Labs.
+A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 
 ## Implemented features
 
