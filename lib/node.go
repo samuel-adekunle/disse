@@ -50,24 +50,36 @@ func (n *BaseNode) SubNodesInit(ctx context.Context) {
 }
 
 func (n *BaseNode) SubNodesHandleMessage(ctx context.Context, mt MessageTriplet) {
-	for address, node := range n.subNodes {
-		if address == mt.To {
-			log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
-			node.HandleMessage(ctx, mt.Message, mt.From)
-		} else {
-			node.SubNodesHandleMessage(ctx, mt)
+	if node, ok := n.subNodes[mt.To]; ok {
+		log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+		node.HandleMessage(ctx, mt.Message, mt.From)
+	} else {
+		var wg sync.WaitGroup
+		for _, node := range n.subNodes {
+			wg.Add(1)
+			go func(_node Node) {
+				_node.SubNodesHandleMessage(ctx, mt)
+				wg.Done()
+			}(node)
 		}
+		wg.Wait()
 	}
 }
 
 func (n *BaseNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet) {
-	for address, node := range n.subNodes {
-		if address == tt.From {
-			log.Printf("HandleTimer(%v, %v, %v)\n", tt.From, tt.Timer, tt.Duration)
-			node.HandleTimer(ctx, tt.Timer, tt.Duration)
-		} else {
-			node.SubNodesHandleTimer(ctx, tt)
+	if node, ok := n.subNodes[tt.To]; ok {
+		log.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
+		node.HandleTimer(ctx, tt.Timer, tt.Duration)
+	} else {
+		var wg sync.WaitGroup
+		for _, node := range n.subNodes {
+			wg.Add(1)
+			go func(_node Node) {
+				_node.SubNodesHandleTimer(ctx, tt)
+				wg.Done()
+			}(node)
 		}
+		wg.Wait()
 	}
 }
 
@@ -79,10 +91,8 @@ func (n *BaseNode) SendMessage(ctx context.Context, message Message, to Address)
 	default:
 		log.Printf("SendMessage(%v -> %v, %v)\n", n.address, to, message)
 		mt := MessageTriplet{message, n.address, to}
-		if to == n.address {
+		if to.Root() == n.address.Root() {
 			n.sim.HandleMessage(ctx, mt)
-		} else if to.Root() == n.address {
-			n.SubNodesHandleMessage(ctx, mt)
 		} else {
 			n.sim.MessageQueue <- mt
 		}

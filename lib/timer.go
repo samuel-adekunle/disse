@@ -6,6 +6,6 @@ type Timer string
 
 type TimerTriplet struct {
 	Timer    Timer
-	From     Address
+	To       Address
 	Duration time.Duration
 }

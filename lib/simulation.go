@@ -78,16 +78,16 @@ func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) {
 		log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 		node.HandleMessage(ctx, mt.Message, mt.From)
 	} else {
-		s.nodes[mt.From.Root()].SubNodesHandleMessage(ctx, mt)
+		s.nodes[mt.To.Root()].SubNodesHandleMessage(ctx, mt)
 	}
 }
 
 func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) {
-	if node, ok := s.nodes[tt.From]; ok {
-		log.Printf("HandleTimer(%v, %v)\n", tt.From, tt.Timer)
+	if node, ok := s.nodes[tt.To]; ok {
+		log.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
 		node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	} else {
-		s.nodes[tt.From.Root()].SubNodesHandleTimer(ctx, tt)
+		s.nodes[tt.To.Root()].SubNodesHandleTimer(ctx, tt)
 	}
 }
 
