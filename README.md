@@ -17,14 +17,14 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 - [X] Logging
 - [X] Ping Pong example
 - [X] Node composition (ability to reuse code between nodes)
+- [X] Sequence Diagram Visualisation
+  - [X] Using [PlantUML](https://plantuml.com/en-dark/sequence-diagram)
 
 ## Short term features
 
 - [ ] TCP example
   - [ ] File transfer example built on top of TCP
 - [ ] Unit testing framework for the system
-- [ ] Sequence Diagram Visualisation
-  - [ ] Using [PlantUML](https://plantuml.com/en-dark/sequence-diagram)
 
 ## Long term features
 

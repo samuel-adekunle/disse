@@ -24,7 +24,7 @@ var umlFileName string
 
 func init() {
 	const (
-		defaultLogFileName = ""
+		defaultLogFileName = "/dev/stdout"
 		logFileNameUsage   = "path to log file"
 		defaultUmlFileName = "diag.uml"
 		umlFileNameUsage   = "path to UML diagram file"
@@ -115,21 +115,18 @@ func (s *Simulation) stopSim() {
 
 func (s *Simulation) Run() {
 	flag.Parse()
-	var logFile *os.File = os.Stdout
-	if logFileName != "" {
-		var err error
-		logFile, err = os.Create(logFileName)
-		if err != nil {
-			panic(err)
-		}
-		defer logFile.Close()
+	logFile, err := os.Create(logFileName)
+	if err != nil {
+		panic(err)
 	}
+	defer logFile.Close()
 	s.debugLog = log.New(logFile, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
 	umlFile, err := os.Create(umlFileName)
 	if err != nil {
 		panic(err)
 	}
+	defer umlFile.Close()
 	s.umlLog = log.New(umlFile, "", 0)
 	s.umlLog.Println("@startuml")
 	s.umlLog.Println("!theme reddress-lightred")
