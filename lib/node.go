@@ -9,6 +9,7 @@ import (
 type Node interface {
 	Init(context.Context)
 	SubNodesInit(context.Context)
+	AddSubNode(Address, Node)
 	HandleMessage(context.Context, Message, Address)
 	HandleTimer(context.Context, Timer, time.Duration)
 }
@@ -20,11 +21,24 @@ type BaseNode struct {
 	SubNodes     map[Address]Node
 }
 
+func NewBaseNode(sim *Simulation, address Address) BaseNode {
+	return BaseNode{
+		Address:      address,
+		MessageQueue: sim.MessageQueue,
+		TimerQueue:   sim.TimerQueue,
+		SubNodes:     make(map[Address]Node),
+	}
+}
+
 func (n *BaseNode) SubNodesInit(ctx context.Context) {
 	for address, node := range n.SubNodes {
 		log.Printf("Init(%v)\n", address)
 		node.Init(ctx)
 	}
+}
+
+func (n *BaseNode) AddSubNode(address Address, node Node) {
+	n.SubNodes[address] = node
 }
 
 func (n *BaseNode) SendMessage(ctx context.Context, message Message, to Address) {

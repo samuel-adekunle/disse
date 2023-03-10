@@ -10,21 +10,13 @@ func main() {
 	pingMessage, pongMessage := ds.Message("Ping"), ds.Message("Pong")
 	serverAddress, clientAddress := ds.Address("PingServer"), ds.Address("PingClient")
 	pingServer := &PingServer{
-		BaseNode: ds.BaseNode{
-			Address:      serverAddress,
-			MessageQueue: sim.MessageQueue,
-			TimerQueue:   sim.TimerQueue,
-		},
+		BaseNode:    ds.NewBaseNode(sim, serverAddress),
 		PingMessage: pingMessage,
 		PongMessage: pongMessage,
 		PingCounter: 0,
 	}
 	pingClient := &PingClient{
-		BaseNode: ds.BaseNode{
-			Address:      clientAddress,
-			MessageQueue: sim.MessageQueue,
-			TimerQueue:   sim.TimerQueue,
-		},
+		BaseNode:      ds.NewBaseNode(sim, clientAddress),
 		PingMessage:   pingMessage,
 		PongMessage:   pongMessage,
 		ServerAddress: serverAddress,

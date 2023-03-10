@@ -10,7 +10,6 @@ const EchoTimer ds.Timer = "EchoTimer"
 
 type EchoClient struct {
 	ds.BaseNode
-	*PingClient
 	EchoServerAddress ds.Address
 	EchoInterval      time.Duration
 	EchoMessage       ds.Message
