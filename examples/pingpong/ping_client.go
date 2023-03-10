@@ -6,30 +6,30 @@ import (
 	"time"
 )
 
-const PingTimer ds.Timer = "PingTimer"
+const pingTimer ds.Timer = "PingTimer"
 
 type PingClient struct {
-	ds.BaseNode
-	PingMessage   ds.Message
-	PongMessage   ds.Message
-	ServerAddress ds.Address
-	PingInterval  time.Duration
+	*ds.BaseNode
+	pingMessage   ds.Message
+	pongMessage   ds.Message
+	serverAddress ds.Address
+	pingInterval  time.Duration
 	PongCounter   int
 }
 
 func (n *PingClient) Init(ctx context.Context) {
-	n.SetTimer(ctx, PingTimer, n.PingInterval)
+	n.SetTimer(ctx, pingTimer, n.pingInterval)
 }
 
 func (n *PingClient) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) {
-	if message == n.PongMessage {
+	if message == n.pongMessage {
 		n.PongCounter++
 	}
 }
 
 func (n *PingClient) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) {
-	if timer == PingTimer {
-		n.SendMessage(ctx, n.PingMessage, n.ServerAddress)
-		n.SetTimer(ctx, PingTimer, n.PingInterval)
+	if timer == pingTimer {
+		n.SendMessage(ctx, n.pingMessage, n.serverAddress)
+		n.SetTimer(ctx, pingTimer, n.pingInterval)
 	}
 }

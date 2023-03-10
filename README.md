@@ -19,17 +19,19 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 
 ## Short term features
 
-- [ ] Node composition (reuse code)
+- [X] Node composition (ability to reuse code between nodes)
   - [X] Subnode creation
   - [X] Root internode message handling
   - [X] Subnode internode message handling
-  - [ ] Root intranode message handling
-  - [ ] Subnode intranode message handling
-- [ ] Unit testing framework for the system
+  - [X] Root intranode message handling
+  - [X] Subnode intranode message handling
+  - [ ] Clean up code best practices
 - [ ] TCP example
+  - [ ] File transfer example built on top of TCP
 
 ## Long term features
 
+- [ ] Unit testing framework for the system
 - [ ] Sequence Diagram Visualisation
 - [ ] Model checking with pruning
 - [ ] Paxos example

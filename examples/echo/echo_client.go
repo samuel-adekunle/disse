@@ -6,29 +6,29 @@ import (
 	"time"
 )
 
-const EchoTimer ds.Timer = "EchoTimer"
+const echoTimer ds.Timer = "EchoTimer"
 
 type EchoClient struct {
-	ds.BaseNode
-	EchoServerAddress ds.Address
-	EchoInterval      time.Duration
-	EchoMessage       ds.Message
+	*ds.BaseNode
+	echoServerAddress ds.Address
+	echoInterval      time.Duration
+	echoMessage       ds.Message
 	EchoCounter       int
 }
 
 func (n *EchoClient) Init(ctx context.Context) {
-	n.SetTimer(ctx, EchoTimer, n.EchoInterval)
+	n.SetTimer(ctx, echoTimer, n.echoInterval)
 }
 
 func (n *EchoClient) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) {
-	if message == n.EchoMessage {
+	if message == n.echoMessage {
 		n.EchoCounter++
 	}
 }
 
 func (n *EchoClient) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) {
-	if timer == EchoTimer {
-		n.SendMessage(ctx, n.EchoMessage, n.EchoServerAddress)
-		n.SetTimer(ctx, EchoTimer, n.EchoInterval)
+	if timer == echoTimer {
+		n.SendMessage(ctx, n.echoMessage, n.echoServerAddress)
+		n.SetTimer(ctx, echoTimer, n.echoInterval)
 	}
 }

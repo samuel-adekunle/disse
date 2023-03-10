@@ -7,18 +7,18 @@ import (
 )
 
 type PingServer struct {
-	ds.BaseNode
-	PingMessage ds.Message
-	PongMessage ds.Message
+	*ds.BaseNode
+	pingMessage ds.Message
+	pongMessage ds.Message
 	PingCounter int
 }
 
 func (n *PingServer) Init(ctx context.Context) {}
 
 func (n *PingServer) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) {
-	if message == n.PingMessage {
+	if message == n.pingMessage {
 		n.PingCounter++
-		n.SendMessage(ctx, n.PongMessage, from)
+		n.SendMessage(ctx, n.pongMessage, from)
 	}
 }
 

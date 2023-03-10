@@ -7,15 +7,15 @@ import (
 )
 
 type EchoServer struct {
-	ds.BaseNode
-	EchoMessage ds.Message
+	*ds.BaseNode
+	echoMessage ds.Message
 	EchoCounter int
 }
 
 func (n *EchoServer) Init(ctx context.Context) {}
 
 func (n *EchoServer) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) {
-	if message == n.EchoMessage {
+	if message == n.echoMessage {
 		n.SendMessage(ctx, message, from)
 		n.EchoCounter++
 	}

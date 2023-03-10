@@ -18,82 +18,84 @@ type Node interface {
 }
 
 type BaseNode struct {
-	Address      Address
-	MessageQueue chan MessageTriplet
-	TimerQueue   chan TimerTriplet
-	SubNodes     map[Address]Node
+	address  Address
+	sim      *Simulation
+	subNodes map[Address]Node
 }
 
-func NewBaseNode(sim *Simulation, address Address) BaseNode {
-	return BaseNode{
-		Address:      address,
-		MessageQueue: sim.MessageQueue,
-		TimerQueue:   sim.TimerQueue,
-		SubNodes:     make(map[Address]Node),
+func NewBaseNode(sim *Simulation, address Address) *BaseNode {
+	return &BaseNode{
+		address:  address,
+		sim:      sim,
+		subNodes: make(map[Address]Node),
 	}
 }
 
 func (n *BaseNode) AddSubNode(address Address, node Node) {
-	n.SubNodes[address] = node
+	n.subNodes[address] = node
 }
 
 func (n *BaseNode) SubNodesInit(ctx context.Context) {
-	for address, node := range n.SubNodes {
-		log.Printf("Init(%v)\n", address)
-		node.Init(ctx)
+	var wg sync.WaitGroup
+	for address, node := range n.subNodes {
+		wg.Add(1)
+		go func(_address Address, _node Node) {
+			log.Printf("Init(%v)\n", _address)
+			_node.Init(ctx)
+			_node.SubNodesInit(ctx)
+			wg.Done()
+		}(address, node)
 	}
+	wg.Wait()
 }
 
 func (n *BaseNode) SubNodesHandleMessage(ctx context.Context, mt MessageTriplet) {
-	var wg sync.WaitGroup
-	for address, node := range n.SubNodes {
-		wg.Add(1)
-		go func(_address Address, _node Node) {
-			if _address == mt.To {
-				log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
-				_node.HandleMessage(ctx, mt.Message, mt.From)
-			} else {
-				_node.SubNodesHandleMessage(ctx, mt)
-			}
-		}(address, node)
+	for address, node := range n.subNodes {
+		if address == mt.To {
+			log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+			node.HandleMessage(ctx, mt.Message, mt.From)
+		} else {
+			node.SubNodesHandleMessage(ctx, mt)
+		}
 	}
-	wg.Wait()
 }
 
 func (n *BaseNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet) {
-	var wg sync.WaitGroup
-	for address, node := range n.SubNodes {
-		wg.Add(1)
-		go func(_address Address, _node Node) {
-			if _address == tt.From {
-				log.Printf("HandleTimer(%v, %v, %v)\n", tt.From, tt.Timer, tt.Length)
-				_node.HandleTimer(ctx, tt.Timer, tt.Length)
-			} else {
-				_node.SubNodesHandleTimer(ctx, tt)
-			}
-		}(address, node)
+	for address, node := range n.subNodes {
+		if address == tt.From {
+			log.Printf("HandleTimer(%v, %v, %v)\n", tt.From, tt.Timer, tt.Duration)
+			node.HandleTimer(ctx, tt.Timer, tt.Duration)
+		} else {
+			node.SubNodesHandleTimer(ctx, tt)
+		}
 	}
-	wg.Wait()
 }
 
 func (n *BaseNode) SendMessage(ctx context.Context, message Message, to Address) {
 	select {
 	case <-ctx.Done():
-		log.Printf("StopSim.SendMessage(%v -> %v, %v)\n", n.Address, to, message)
+		log.Printf("StopSim.SendMessage(%v -> %v, %v)\n", n.address, to, message)
 		return
 	default:
-		log.Printf("SendMessage(%v -> %v, %v)\n", n.Address, to, message)
-		n.MessageQueue <- MessageTriplet{message, n.Address, to}
+		log.Printf("SendMessage(%v -> %v, %v)\n", n.address, to, message)
+		mt := MessageTriplet{message, n.address, to}
+		if to == n.address {
+			n.sim.HandleMessage(ctx, mt)
+		} else if to.Root() == n.address {
+			n.SubNodesHandleMessage(ctx, mt)
+		} else {
+			n.sim.MessageQueue <- mt
+		}
 	}
 }
 
-func (n *BaseNode) SetTimer(ctx context.Context, timer Timer, length time.Duration) {
+func (n *BaseNode) SetTimer(ctx context.Context, timer Timer, duration time.Duration) {
 	select {
 	case <-ctx.Done():
-		log.Printf("StopSim.SetTimer(%v, %v, %v)\n", n.Address, timer, length)
+		log.Printf("StopSim.SetTimer(%v, %v, %v)\n", n.address, timer, duration)
 		return
 	default:
-		log.Printf("SetTimer(%v, %v, %v)\n", n.Address, timer, length)
-		n.TimerQueue <- TimerTriplet{timer, n.Address, length}
+		log.Printf("SetTimer(%v, %v, %v)\n", n.address, timer, duration)
+		n.sim.TimerQueue <- TimerTriplet{timer, n.address, duration}
 	}
 }

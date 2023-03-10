@@ -31,7 +31,7 @@ func init() {
 }
 
 type Simulation struct {
-	Nodes        map[Address]Node
+	nodes        map[Address]Node
 	MessageQueue chan MessageTriplet
 	TimerQueue   chan TimerTriplet
 	MinLatency   time.Duration
@@ -56,7 +56,7 @@ func NewSimulationWithBuffer(bufferSizes *BufferSizes) *Simulation {
 		}
 	}
 	return &Simulation{
-		Nodes:        make(map[Address]Node),
+		nodes:        make(map[Address]Node),
 		MessageQueue: make(chan MessageTriplet, bufferSizes.MessageBufferSize),
 		TimerQueue:   make(chan TimerTriplet, bufferSizes.TimerBufferSize),
 		MinLatency:   defaultMinLatency,
@@ -66,11 +66,44 @@ func NewSimulationWithBuffer(bufferSizes *BufferSizes) *Simulation {
 }
 
 func (s *Simulation) AddNode(address Address, node Node) {
-	s.Nodes[address] = node
+	s.nodes[address] = node
 }
 
-func (s *Simulation) RandomLatency() time.Duration {
+func (s *Simulation) randomLatency() time.Duration {
 	return s.MinLatency + time.Duration(rand.Int63n(int64(s.MaxLatency-s.MinLatency)))
+}
+
+func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) {
+	if node, ok := s.nodes[mt.To]; ok {
+		log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+		node.HandleMessage(ctx, mt.Message, mt.From)
+	} else {
+		s.nodes[mt.From.Root()].SubNodesHandleMessage(ctx, mt)
+	}
+}
+
+func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) {
+	if node, ok := s.nodes[tt.From]; ok {
+		log.Printf("HandleTimer(%v, %v)\n", tt.From, tt.Timer)
+		node.HandleTimer(ctx, tt.Timer, tt.Duration)
+	} else {
+		s.nodes[tt.From.Root()].SubNodesHandleTimer(ctx, tt)
+	}
+}
+
+func (s *Simulation) startSim(ctx context.Context) {
+	log.Printf("StartSim(%v)\n", s.Duration)
+	for address, node := range s.nodes {
+		log.Printf("Init(%v)\n", address)
+		node.Init(ctx)
+		node.SubNodesInit(ctx)
+	}
+}
+
+func (s *Simulation) stopSim() {
+	log.Println("StopSim()")
+	close(s.MessageQueue)
+	close(s.TimerQueue)
 }
 
 func (s *Simulation) Run() {
@@ -84,9 +117,9 @@ func (s *Simulation) Run() {
 		}
 		defer logFile.Close()
 	}
-	log.Printf("SetLogOutput(%v)\n", logFile.Name())
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
 	log.SetOutput(logFile)
+	log.Printf("SetLogOutput(%v)\n", logFile.Name())
 
 	var ctx context.Context
 	if s.Duration == Infinity {
@@ -97,21 +130,13 @@ func (s *Simulation) Run() {
 		defer cancel()
 	}
 
-	log.Printf("StartSim(%v)\n", s.Duration)
-	for address, node := range s.Nodes {
-		log.Printf("Init(%v)\n", address)
-		node.Init(ctx)
-		node.SubNodesInit(ctx)
-	}
-
+	s.startSim(ctx)
 	var wg sync.WaitGroup
 	for {
 		select {
 		case <-ctx.Done():
 			if s.Duration != Infinity {
-				log.Println("StopSim()")
-				close(s.MessageQueue)
-				close(s.TimerQueue)
+				s.stopSim()
 				wg.Wait()
 				log.Println("EndSim()")
 				return
@@ -119,25 +144,15 @@ func (s *Simulation) Run() {
 		case mt := <-s.MessageQueue:
 			wg.Add(1)
 			go func() {
-				time.Sleep(s.RandomLatency())
-				if node, ok := s.Nodes[mt.To]; ok {
-					log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
-					node.HandleMessage(ctx, mt.Message, mt.From)
-				} else {
-					s.Nodes[mt.From.Root()].SubNodesHandleMessage(ctx, mt)
-				}
+				time.Sleep(s.randomLatency())
+				s.HandleMessage(ctx, mt)
 				wg.Done()
 			}()
 		case tt := <-s.TimerQueue:
 			wg.Add(1)
 			go func() {
-				time.Sleep(tt.Length)
-				if node, ok := s.Nodes[tt.From]; ok {
-					log.Printf("HandleTimer(%v, %v, %v)\n", tt.From, tt.Timer, tt.Length)
-					node.HandleTimer(ctx, tt.Timer, tt.Length)
-				} else {
-					s.Nodes[tt.From.Root()].SubNodesHandleTimer(ctx, tt)
-				}
+				time.Sleep(tt.Duration)
+				s.HandleTimer(ctx, tt)
 				wg.Done()
 			}()
 		}
