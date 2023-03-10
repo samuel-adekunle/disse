@@ -9,7 +9,7 @@ func main() {
 	sim := ds.NewSimulation()
 	echoServerAddress, echoClientAddress := ds.Address("EchoServer"), ds.Address("EchoClient")
 	pingServerAddress, pingClientAddress := echoServerAddress.SubAddress("PingServer"), echoClientAddress.SubAddress("PingClient")
-	pingMessage, pongMessage := ds.Message("Ping"), ds.Message("Pong")
+	pingMessage, pongMessage, echoMessage := ds.Message("Ping"), ds.Message("Pong"), ds.Message("Echo")
 
 	pingServer := &PingServer{
 		BaseNode: ds.BaseNode{
@@ -39,7 +39,9 @@ func main() {
 			MessageQueue: sim.MessageQueue,
 			TimerQueue:   sim.TimerQueue,
 		},
-		PingServer: pingServer,
+		PingServer:  pingServer,
+		EchoMessage: echoMessage,
+		EchoCounter: 0,
 	}
 	echoClient := &EchoClient{
 		BaseNode: ds.BaseNode{
@@ -47,11 +49,15 @@ func main() {
 			MessageQueue: sim.MessageQueue,
 			TimerQueue:   sim.TimerQueue,
 		},
-		PingClient: pingClient,
+		PingClient:        pingClient,
+		EchoInterval:      2 * time.Second,
+		EchoServerAddress: echoServerAddress,
+		EchoMessage:       echoMessage,
+		EchoCounter:       0,
 	}
 
 	sim.AddNode(echoServerAddress, echoSever)
 	sim.AddNode(echoClientAddress, echoClient)
-	sim.Duration = 3 * time.Second
+	sim.Duration = 10 * time.Second
 	sim.Run()
 }

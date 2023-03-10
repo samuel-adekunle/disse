@@ -85,20 +85,25 @@ func (s *Simulation) Run() {
 		defer logFile.Close()
 	}
 
-	var wg sync.WaitGroup
-
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
 	log.SetOutput(logFile)
 	log.Printf("SetLogOutput(%v)\n", logFile.Name())
 	log.Printf("StartSim(%v)\n", s.Duration)
 
-	ctx, cancel := context.WithTimeout(context.Background(), s.Duration)
-	defer cancel()
+	var ctx context.Context
+	if s.Duration == Infinity {
+		ctx = context.Background()
+	} else {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), s.Duration)
+		defer cancel()
+	}
 
 	for _, node := range s.Nodes {
 		node.Init(ctx)
 	}
 
+	var wg sync.WaitGroup
 	for {
 		select {
 		case <-ctx.Done():
