@@ -13,18 +13,13 @@ type PingServer struct {
 	PingCounter int
 }
 
-func (n *PingServer) Init(ctx context.Context) {
-	n.LogInit()
-}
+func (n *PingServer) Init(ctx context.Context) {}
 
 func (n *PingServer) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) {
-	n.BaseNode.LogHandleMessage(message, from)
 	if message == n.PingMessage {
 		n.PingCounter++
 		n.SendMessage(ctx, n.PongMessage, from)
 	}
 }
 
-func (n *PingServer) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) {
-	n.BaseNode.LogHandleTimer(timer, length)
-}
+func (n *PingServer) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) {}

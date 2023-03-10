@@ -21,8 +21,8 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 
 - [ ] Node composition (reuse code)
   - [X] Root internode message handling
-  - [ ] Root intranode message handling
   - [ ] Subnode internode message handling
+  - [ ] Root intranode message handling
   - [ ] Subnode intranode message handling
   - [ ] Subnode creation
 - [ ] Unit testing framework for the system

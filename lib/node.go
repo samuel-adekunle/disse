@@ -8,6 +8,7 @@ import (
 
 type Node interface {
 	Init(context.Context)
+	SubNodesInit(context.Context)
 	HandleMessage(context.Context, Message, Address)
 	HandleTimer(context.Context, Timer, time.Duration)
 }
@@ -16,18 +17,14 @@ type BaseNode struct {
 	Address      Address
 	MessageQueue chan MessageTriplet
 	TimerQueue   chan TimerTriplet
+	SubNodes     map[Address]Node
 }
 
-func (n *BaseNode) LogInit() {
-	log.Printf("Init(%v)\n", n.Address)
-}
-
-func (n *BaseNode) LogHandleMessage(message Message, from Address) {
-	log.Printf("HandleMessage(%v -> %v, %v)\n", from, n.Address, message)
-}
-
-func (n *BaseNode) LogHandleTimer(timer Timer, length time.Duration) {
-	log.Printf("HandleTimer(%v, %v, %v)\n", n.Address, timer, length)
+func (n *BaseNode) SubNodesInit(ctx context.Context) {
+	for address, node := range n.SubNodes {
+		log.Printf("Init(%v)\n", address)
+		node.Init(ctx)
+	}
 }
 
 func (n *BaseNode) SendMessage(ctx context.Context, message Message, to Address) {

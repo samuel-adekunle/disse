@@ -84,11 +84,9 @@ func (s *Simulation) Run() {
 		}
 		defer logFile.Close()
 	}
-
+	log.Printf("SetLogOutput(%v)\n", logFile.Name())
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
 	log.SetOutput(logFile)
-	log.Printf("SetLogOutput(%v)\n", logFile.Name())
-	log.Printf("StartSim(%v)\n", s.Duration)
 
 	var ctx context.Context
 	if s.Duration == Infinity {
@@ -99,8 +97,11 @@ func (s *Simulation) Run() {
 		defer cancel()
 	}
 
-	for _, node := range s.Nodes {
+	log.Printf("StartSim(%v)\n", s.Duration)
+	for address, node := range s.Nodes {
+		log.Printf("Init(%v)\n", address)
 		node.Init(ctx)
+		node.SubNodesInit(ctx)
 	}
 
 	var wg sync.WaitGroup
@@ -119,6 +120,7 @@ func (s *Simulation) Run() {
 			wg.Add(1)
 			go func() {
 				time.Sleep(s.RandomLatency())
+				log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 				s.Nodes[mt.To.Root()].HandleMessage(ctx, mt.Message, mt.From)
 				wg.Done()
 			}()
@@ -126,6 +128,7 @@ func (s *Simulation) Run() {
 			wg.Add(1)
 			go func() {
 				time.Sleep(tt.Length)
+				log.Printf("HandleTimer(%v, %v, %v)\n", tt.From, tt.Timer, tt.Length)
 				s.Nodes[tt.From.Root()].HandleTimer(ctx, tt.Timer, tt.Length)
 				wg.Done()
 			}()
