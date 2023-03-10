@@ -2,7 +2,6 @@ package lib
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 )
@@ -40,7 +39,7 @@ func (n *BaseNode) SubNodesInit(ctx context.Context) {
 	for address, node := range n.subNodes {
 		wg.Add(1)
 		go func(_address Address, _node Node) {
-			log.Printf("Init(%v)\n", _address)
+			n.sim.debugLog.Printf("Init(%v)\n", _address)
 			_node.Init(ctx)
 			_node.SubNodesInit(ctx)
 			wg.Done()
@@ -51,7 +50,7 @@ func (n *BaseNode) SubNodesInit(ctx context.Context) {
 
 func (n *BaseNode) SubNodesHandleMessage(ctx context.Context, mt MessageTriplet) {
 	if node, ok := n.subNodes[mt.To]; ok {
-		log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+		n.sim.debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 		node.HandleMessage(ctx, mt.Message, mt.From)
 	} else {
 		var wg sync.WaitGroup
@@ -68,7 +67,7 @@ func (n *BaseNode) SubNodesHandleMessage(ctx context.Context, mt MessageTriplet)
 
 func (n *BaseNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet) {
 	if node, ok := n.subNodes[tt.To]; ok {
-		log.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
+		n.sim.debugLog.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
 		node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	} else {
 		var wg sync.WaitGroup
@@ -86,10 +85,11 @@ func (n *BaseNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet) {
 func (n *BaseNode) SendMessage(ctx context.Context, message Message, to Address) {
 	select {
 	case <-ctx.Done():
-		log.Printf("StopSim.SendMessage(%v -> %v, %v)\n", n.address, to, message)
+		n.sim.debugLog.Printf("StopSim.SendMessage(%v -> %v, %v)\n", n.address, to, message)
 		return
 	default:
-		log.Printf("SendMessage(%v -> %v, %v)\n", n.address, to, message)
+		n.sim.umlLog.Printf("%v -> %v : %v\n", n.address, to, message)
+		n.sim.debugLog.Printf("SendMessage(%v -> %v, %v)\n", n.address, to, message)
 		mt := MessageTriplet{message, n.address, to}
 		if to.Root() == n.address.Root() {
 			n.sim.HandleMessage(ctx, mt)
@@ -102,10 +102,10 @@ func (n *BaseNode) SendMessage(ctx context.Context, message Message, to Address)
 func (n *BaseNode) SetTimer(ctx context.Context, timer Timer, duration time.Duration) {
 	select {
 	case <-ctx.Done():
-		log.Printf("StopSim.SetTimer(%v, %v, %v)\n", n.address, timer, duration)
+		n.sim.debugLog.Printf("StopSim.SetTimer(%v, %v, %v)\n", n.address, timer, duration)
 		return
 	default:
-		log.Printf("SetTimer(%v, %v, %v)\n", n.address, timer, duration)
+		n.sim.debugLog.Printf("SetTimer(%v, %v, %v)\n", n.address, timer, duration)
 		n.sim.TimerQueue <- TimerTriplet{timer, n.address, duration}
 	}
 }

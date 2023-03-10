@@ -23,11 +23,12 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 - [ ] TCP example
   - [ ] File transfer example built on top of TCP
 - [ ] Unit testing framework for the system
+- [ ] Sequence Diagram Visualisation
+  - [ ] Using [PlantUML](https://plantuml.com/en-dark/sequence-diagram)
 
 ## Long term features
 
-- [ ] Sequence Diagram Visualisation
-- [ ] Model checking with pruning
+- [ ] Model checking with state pruning
 - [ ] Paxos example
 
 ## Extensions

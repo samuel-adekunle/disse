@@ -1,5 +1,6 @@
 *.log
 *.ds
+*.uml
 
 .vscode
 .idea

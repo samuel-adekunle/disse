@@ -20,18 +20,25 @@ const (
 )
 
 var logFileName string
+var umlFileName string
 
 func init() {
 	const (
 		defaultLogFileName = ""
 		logFileNameUsage   = "path to log file"
+		defaultUmlFileName = "diag.uml"
+		umlFileNameUsage   = "path to UML diagram file"
 	)
 	flag.StringVar(&logFileName, "logfile", defaultLogFileName, "path to log file")
 	flag.StringVar(&logFileName, "l", defaultLogFileName, logFileNameUsage+" (shorthand)")
+	flag.StringVar(&umlFileName, "umlfile", defaultUmlFileName, "path to UML diagram file")
+	flag.StringVar(&umlFileName, "u", defaultUmlFileName, umlFileNameUsage+" (shorthand)")
 }
 
 type Simulation struct {
 	nodes        map[Address]Node
+	debugLog     *log.Logger
+	umlLog       *log.Logger
 	MessageQueue chan MessageTriplet
 	TimerQueue   chan TimerTriplet
 	MinLatency   time.Duration
@@ -75,7 +82,7 @@ func (s *Simulation) randomLatency() time.Duration {
 
 func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) {
 	if node, ok := s.nodes[mt.To]; ok {
-		log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+		s.debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 		node.HandleMessage(ctx, mt.Message, mt.From)
 	} else {
 		s.nodes[mt.To.Root()].SubNodesHandleMessage(ctx, mt)
@@ -84,7 +91,7 @@ func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) {
 
 func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) {
 	if node, ok := s.nodes[tt.To]; ok {
-		log.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
+		s.debugLog.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
 		node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	} else {
 		s.nodes[tt.To.Root()].SubNodesHandleTimer(ctx, tt)
@@ -92,16 +99,16 @@ func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) {
 }
 
 func (s *Simulation) startSim(ctx context.Context) {
-	log.Printf("StartSim(%v)\n", s.Duration)
+	s.debugLog.Printf("StartSim(%v)\n", s.Duration)
 	for address, node := range s.nodes {
-		log.Printf("Init(%v)\n", address)
+		s.debugLog.Printf("Init(%v)\n", address)
 		node.Init(ctx)
 		node.SubNodesInit(ctx)
 	}
 }
 
 func (s *Simulation) stopSim() {
-	log.Println("StopSim()")
+	s.debugLog.Println("StopSim()")
 	close(s.MessageQueue)
 	close(s.TimerQueue)
 }
@@ -117,9 +124,13 @@ func (s *Simulation) Run() {
 		}
 		defer logFile.Close()
 	}
-	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
-	log.SetOutput(logFile)
-	log.Printf("SetLogOutput(%v)\n", logFile.Name())
+	s.debugLog = log.New(logFile, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
+
+	umlFile, err := os.Create(umlFileName)
+	if err != nil {
+		panic(err)
+	}
+	s.umlLog = log.New(umlFile, "", 0)
 
 	var ctx context.Context
 	if s.Duration == Infinity {
@@ -138,7 +149,7 @@ func (s *Simulation) Run() {
 			if s.Duration != Infinity {
 				s.stopSim()
 				wg.Wait()
-				log.Println("EndSim()")
+				s.debugLog.Println("EndSim()")
 				return
 			}
 		case mt := <-s.MessageQueue:
