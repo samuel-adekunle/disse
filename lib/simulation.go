@@ -120,16 +120,24 @@ func (s *Simulation) Run() {
 			wg.Add(1)
 			go func() {
 				time.Sleep(s.RandomLatency())
-				log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
-				s.Nodes[mt.To.Root()].HandleMessage(ctx, mt.Message, mt.From)
+				if node, ok := s.Nodes[mt.To]; ok {
+					log.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+					node.HandleMessage(ctx, mt.Message, mt.From)
+				} else {
+					s.Nodes[mt.From.Root()].SubNodesHandleMessage(ctx, mt)
+				}
 				wg.Done()
 			}()
 		case tt := <-s.TimerQueue:
 			wg.Add(1)
 			go func() {
 				time.Sleep(tt.Length)
-				log.Printf("HandleTimer(%v, %v, %v)\n", tt.From, tt.Timer, tt.Length)
-				s.Nodes[tt.From.Root()].HandleTimer(ctx, tt.Timer, tt.Length)
+				if node, ok := s.Nodes[tt.From]; ok {
+					log.Printf("HandleTimer(%v, %v, %v)\n", tt.From, tt.Timer, tt.Length)
+					node.HandleTimer(ctx, tt.Timer, tt.Length)
+				} else {
+					s.Nodes[tt.From.Root()].SubNodesHandleTimer(ctx, tt)
+				}
 				wg.Done()
 			}()
 		}
