@@ -29,7 +29,6 @@ func main() {
 		PongMessage:   pongMessage,
 		ServerAddress: serverAddress,
 		PingInterval:  1 * time.Second,
-		PingCounter:   3,
 		PongCounter:   0,
 	}
 	sim.AddNode(serverAddress, pingServer)

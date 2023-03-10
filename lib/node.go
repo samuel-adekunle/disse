@@ -1,14 +1,15 @@
 package lib
 
 import (
+	"context"
 	"log"
 	"time"
 )
 
 type Node interface {
-	Init()
-	HandleMessage(Message, Address)
-	HandleTimer(Timer, time.Duration)
+	Init(context.Context)
+	HandleMessage(context.Context, Message, Address)
+	HandleTimer(context.Context, Timer, time.Duration)
 }
 
 type BaseNode struct {
@@ -29,12 +30,24 @@ func (n *BaseNode) LogHandleTimer(timer Timer, length time.Duration) {
 	log.Printf("HandleTimer(%v, %v, %v)\n", n.Address, timer, length)
 }
 
-func (n *BaseNode) SendMessage(message Message, to Address) {
-	log.Printf("SendMessage(%v -> %v, %v)\n", n.Address, to, message)
-	n.MessageQueue <- MessageTriplet{message, n.Address, to}
+func (n *BaseNode) SendMessage(ctx context.Context, message Message, to Address) {
+	select {
+	case <-ctx.Done():
+		log.Printf("Timeout.SendMessage(%v -> %v, %v)\n", n.Address, to, message)
+		return
+	default:
+		log.Printf("SendMessage(%v -> %v, %v)\n", n.Address, to, message)
+		n.MessageQueue <- MessageTriplet{message, n.Address, to}
+	}
 }
 
-func (n *BaseNode) SetTimer(timer Timer, length time.Duration) {
-	log.Printf("SetTimer(%v, %v, %v)\n", n.Address, timer, length)
-	n.TimerQueue <- TimerTriplet{timer, n.Address, length}
+func (n *BaseNode) SetTimer(ctx context.Context, timer Timer, length time.Duration) {
+	select {
+	case <-ctx.Done():
+		log.Printf("Timeout.SetTimer(%v, %v, %v)\n", n.Address, timer, length)
+		return
+	default:
+		log.Printf("SetTimer(%v, %v, %v)\n", n.Address, timer, length)
+		n.TimerQueue <- TimerTriplet{timer, n.Address, length}
+	}
 }

@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"context"
 	"flag"
 	"log"
 	"math/rand"
@@ -84,40 +85,45 @@ func (s *Simulation) Run() {
 		defer logFile.Close()
 	}
 
+	var wg sync.WaitGroup
+
 	log.SetFlags(log.Ldate | log.Lmicroseconds | log.Lshortfile)
 	log.SetOutput(logFile)
 	log.Printf("SetLogOutput(%v)\n", logFile.Name())
-
-	var wg sync.WaitGroup
-
 	log.Printf("StartSim(%v)\n", s.Duration)
 
+	ctx, cancel := context.WithTimeout(context.Background(), s.Duration)
+	defer cancel()
+
 	for _, node := range s.Nodes {
-		node.Init()
+		node.Init(ctx)
 	}
 
 	for {
 		select {
+		case <-ctx.Done():
+			if s.Duration != Infinity {
+				log.Println("StopSim()")
+				close(s.MessageQueue)
+				close(s.TimerQueue)
+				wg.Wait()
+				log.Println("EndSim()")
+				return
+			}
 		case mt := <-s.MessageQueue:
 			wg.Add(1)
 			go func() {
 				time.Sleep(s.RandomLatency())
-				s.Nodes[mt.To].HandleMessage(mt.Message, mt.From)
+				s.Nodes[mt.To.Root()].HandleMessage(ctx, mt.Message, mt.From)
 				wg.Done()
 			}()
 		case tt := <-s.TimerQueue:
 			wg.Add(1)
 			go func() {
 				time.Sleep(tt.Length)
-				s.Nodes[tt.From].HandleTimer(tt.Timer, tt.Length)
+				s.Nodes[tt.From.Root()].HandleTimer(ctx, tt.Timer, tt.Length)
 				wg.Done()
 			}()
-		case <-time.After(s.Duration):
-			if s.Duration != Infinity {
-				wg.Wait()
-				log.Println("StopSim()")
-				return
-			}
 		}
 	}
 }
