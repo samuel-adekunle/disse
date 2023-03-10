@@ -19,12 +19,12 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 - [X] Node composition (ability to reuse code between nodes)
 - [X] Sequence Diagram Visualisation
   - [X] Using [PlantUML](https://plantuml.com/en-dark/sequence-diagram)
+- [X] Unit testing framework for the system
 
 ## Short term features
 
 - [ ] TCP example
   - [ ] File transfer example built on top of TCP
-- [ ] Unit testing framework for the system
 
 ## Long term features
 
