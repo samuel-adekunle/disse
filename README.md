@@ -20,6 +20,10 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 ## Short term features
 
 - [ ] Node composition (reuse code)
+  - [X] Root internode message handling
+  - [ ] Root intranode message handling
+  - [ ] Subnode internode message handling
+  - [ ] Subnode intranode message handling
 - [ ] Unit testing framework for the system
 - [ ] TCP example
 
