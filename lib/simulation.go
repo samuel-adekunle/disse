@@ -3,9 +3,11 @@ package lib
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -23,12 +25,16 @@ var logFileName string
 var umlFileName string
 
 func init() {
-	const (
-		defaultLogFileName = "/dev/stdout"
-		logFileNameUsage   = "path to log file"
-		defaultUmlFileName = "diag.uml"
-		umlFileNameUsage   = "path to UML diagram file"
-	)
+	workDir, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	baseFileName := strings.Split(workDir, "/")[len(strings.Split(workDir, "/"))-1]
+	defaultLogFileName := fmt.Sprintf("%s.log", baseFileName)
+	logFileNameUsage := "path to log file"
+	defaultUmlFileName := fmt.Sprintf("%s.uml", baseFileName)
+	umlFileNameUsage := "path to UML diagram file"
+
 	flag.StringVar(&logFileName, "logfile", defaultLogFileName, "path to log file")
 	flag.StringVar(&logFileName, "l", defaultLogFileName, logFileNameUsage+" (shorthand)")
 	flag.StringVar(&umlFileName, "umlfile", defaultUmlFileName, "path to UML diagram file")
