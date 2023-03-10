@@ -131,6 +131,13 @@ func (s *Simulation) Run() {
 		panic(err)
 	}
 	s.umlLog = log.New(umlFile, "", 0)
+	s.umlLog.Println("@startuml")
+	s.umlLog.Println("!theme reddress-lightred")
+	s.umlLog.Println("skinparam shadowing false")
+	s.umlLog.Println("skinparam sequenceArrowThickness 1")
+	s.umlLog.Println("skinparam responseMessageBelowArrow true")
+	s.umlLog.Println("skinparam sequenceMessageAlign right")
+	defer s.umlLog.Println("@enduml")
 
 	var ctx context.Context
 	if s.Duration == Infinity {

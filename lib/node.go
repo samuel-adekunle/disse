@@ -105,6 +105,7 @@ func (n *BaseNode) SetTimer(ctx context.Context, timer Timer, duration time.Dura
 		n.sim.debugLog.Printf("StopSim.SetTimer(%v, %v, %v)\n", n.address, timer, duration)
 		return
 	default:
+		n.sim.umlLog.Printf("%v -> %v : %v\n", n.address, n.address, timer)
 		n.sim.debugLog.Printf("SetTimer(%v, %v, %v)\n", n.address, timer, duration)
 		n.sim.TimerQueue <- TimerTriplet{timer, n.address, duration}
 	}
