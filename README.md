@@ -29,6 +29,13 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 - [ ] Blockchain example
 - [ ] Shared store example
 - [ ] Discover faults in existing systems
+- Simulator Interface, with extension interfaces like a TCP / UDP simulator
+- Fault injection using custom timer that can be paused
+- Invariant testing like no duplication / response timeout checked on message / timer queue with current setup
+- Will need more complex message, timer and address types (but that was always expected. Implement as an interface t
+hat implements encodable or serializable or something, same with timer
+- address depends on simulator type, can be simple string for shared memory simulator or ip addresses for tcp/ip 
+- run simulator on aws / gcp across different regions rather than injecting fake latency
 
 ## Extensions
 
