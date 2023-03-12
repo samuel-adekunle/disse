@@ -36,6 +36,7 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 hat implements encodable or serializable or something, same with timer
 - address depends on simulator type, can be simple string for shared memory simulator or ip addresses for tcp/ip 
 - run simulator on aws / gcp across different regions rather than injecting fake latency
+- Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
 
 ## Extensions
 
