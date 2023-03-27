@@ -17,29 +17,30 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
   - [X] Using [PlantUML](https://plantuml.com/en-dark/sequence-diagram)
 - [X] Unit testing framework for the system
 
-## Short term features
+## Pending work
 
 - [ ] TCP example
   - [ ] File transfer example built on top of TCP
 - [ ] Create detailed project plan
-
-## Long term features
-
-- [ ] Paxos example
-- [ ] Blockchain example
-- [ ] Shared store example
-- [ ] Discover faults in existing systems
-- Simulator Interface, with extension interfaces like a TCP / UDP simulator
-- Fault injection using custom timer that can be paused
-- Invariant testing like no duplication / response timeout checked on message / timer queue with current setup
-- Will need more complex message, timer and address types (but that was always expected. Implement as an interface t
-hat implements encodable or serializable or something, same with timer
-- address depends on simulator type, can be simple string for shared memory simulator or ip addresses for tcp/ip 
-- run simulator on aws / gcp across different regions rather than injecting fake latency
-- Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
+  - [ ] Find students to test out the tool during summer exams
+  - [ ] Feedback collection (More Quantitative vs Qualitative feedback)
+  - [ ] Create evaluation plan
+    - [ ] Ability to discover faults in existing systems
+    - [ ] Speed and writing and deploying new systems
+- [ ] Fault Injection
+  - [ ] Allow certain operations on nodes after certain amounts of time: Sleep, Stop, Start, Restart using a separate queues
+- [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
 
 ## Extensions
 
+- [ ] Integration / Runtime testing: i.e. invariants like no duplication, no timeout while waiting for response
+- [ ] Interactivity: requires a custom timer that can be paused, sped up or slowed down
+  - [ ] Also allow faults to be injected at runtime
 - [ ] Model checking with state pruning
-- [ ] Fault Injection
+- [ ] Simulator Interface, with extension interfaces like a TCP / UDP simulator (needs more complex types)
+  - [ ] Enable to run actual distributed systems using cloud services and test different protocols
 - [ ] Specify system using a configuration language like YAML or JSON
+- [ ] More examples
+  - [ ] Paxos
+  - [ ] Bitcoin Blockchain
+  - [ ] Shared store example
