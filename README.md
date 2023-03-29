@@ -19,6 +19,9 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 
 ## Pending work
 
+- [ ] Fault Injection
+  - [ ] Allow certain operations on nodes after certain amounts of time: Sleep, Stop, Start, Restart using a separate queues
+- [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
 - [ ] TCP example
   - [ ] File transfer example built on top of TCP
 - [ ] Create detailed project plan
@@ -27,9 +30,6 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
   - [ ] Create evaluation plan
     - [ ] Ability to discover faults in existing systems
     - [ ] Speed and writing and deploying new systems
-- [ ] Fault Injection
-  - [ ] Allow certain operations on nodes after certain amounts of time: Sleep, Stop, Start, Restart using a separate queues
-- [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
 
 ## Extensions
 
