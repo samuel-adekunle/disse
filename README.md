@@ -33,6 +33,7 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 
 ## Extensions
 
+- [ ] Implement a custom timer to allow pausing, speeding up and slowing down the simulation
 - [ ] Integration / Runtime testing: i.e. invariants like no duplication, no timeout while waiting for response
 - [ ] Interactivity: requires a custom timer that can be paused, sped up or slowed down
   - [ ] Also allow faults to be injected at runtime

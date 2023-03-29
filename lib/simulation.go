@@ -16,6 +16,7 @@ const (
 	Infinity                 = time.Duration(0)
 	defaultMessageBufferSize = 100
 	defaultTimerBufferSize   = 100
+	defaultFaultBufferSize   = 100
 	defaultMinLatency        = 10 * time.Millisecond
 	defaultMaxLatency        = 100 * time.Millisecond
 	defaultDuration          = Infinity
@@ -47,6 +48,7 @@ type Simulation struct {
 	umlLog       *log.Logger
 	MessageQueue chan MessageTriplet
 	TimerQueue   chan TimerTriplet
+	Faults       []FaultTriplet
 	MinLatency   time.Duration
 	MaxLatency   time.Duration
 	Duration     time.Duration
@@ -55,6 +57,7 @@ type Simulation struct {
 type BufferSizes struct {
 	MessageBufferSize int
 	TimerBufferSize   int
+	FaultBufferSize   int
 }
 
 func NewSimulation() *Simulation {
@@ -66,12 +69,14 @@ func NewSimulationWithBuffer(bufferSizes *BufferSizes) *Simulation {
 		bufferSizes = &BufferSizes{
 			MessageBufferSize: defaultMessageBufferSize,
 			TimerBufferSize:   defaultTimerBufferSize,
+			FaultBufferSize:   defaultFaultBufferSize,
 		}
 	}
 	return &Simulation{
 		nodes:        make(map[Address]Node),
 		MessageQueue: make(chan MessageTriplet, bufferSizes.MessageBufferSize),
 		TimerQueue:   make(chan TimerTriplet, bufferSizes.TimerBufferSize),
+		Faults:       make([]FaultTriplet, 0, bufferSizes.FaultBufferSize),
 		MinLatency:   defaultMinLatency,
 		MaxLatency:   defaultMaxLatency,
 		Duration:     defaultDuration,
@@ -80,6 +85,23 @@ func NewSimulationWithBuffer(bufferSizes *BufferSizes) *Simulation {
 
 func (s *Simulation) AddNode(address Address, node Node) {
 	s.nodes[address] = node
+}
+
+func (s *Simulation) AddNodes(addresses []Address, nodes []Node) {
+	if len(addresses) != len(nodes) {
+		panic("addresses and nodes must have the same length")
+	}
+	for i := range addresses {
+		s.AddNode(addresses[i], nodes[i])
+	}
+}
+
+func (s *Simulation) AddFault(fault FaultTriplet) {
+	s.Faults = append(s.Faults, fault)
+}
+
+func (s *Simulation) AddFaults(faults []FaultTriplet) {
+	s.Faults = append(s.Faults, faults...)
 }
 
 func (s *Simulation) randomLatency() time.Duration {
@@ -101,6 +123,19 @@ func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) {
 		node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	} else {
 		s.nodes[tt.To.Root()].SubNodesHandleTimer(ctx, tt)
+	}
+}
+
+func (s *Simulation) HandleFault(ctx context.Context, fault FaultTriplet) {
+	switch fault.Fault.Name {
+	case Stop:
+		// TODO: Stop all subnodes
+	case Resume:
+		// TODO: Resume all subnodes
+	case Restart:
+		// TODO: Restart all subnodes
+	case Sleep:
+		// TODO: Sleep all subnodes
 	}
 }
 
@@ -151,8 +186,18 @@ func (s *Simulation) Run() {
 		defer cancel()
 	}
 
-	s.startSim(ctx)
 	var wg sync.WaitGroup
+	s.startSim(ctx)
+
+	for _, ft := range s.Faults {
+		wg.Add(1)
+		go func(_ft FaultTriplet) {
+			time.Sleep(_ft.After)
+			s.HandleFault(ctx, _ft)
+			wg.Done()
+		}(ft)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():

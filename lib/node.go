@@ -99,6 +99,20 @@ func (n *BaseNode) SendMessage(ctx context.Context, message Message, to Address)
 	}
 }
 
+// TODO: test how this debug message looks
+func (n *BaseNode) BroadcastMessage(ctx context.Context, message Message, to []Address) {
+	select {
+	case <-ctx.Done():
+		n.sim.debugLog.Printf("StopSim.BroadcastMessage(%v -> %v, %v)\n", n.address, to, message)
+		return
+	default:
+		n.sim.debugLog.Printf("BroadcastMessage(%v -> %v, %v)\n", n.address, to, message)
+		for _, address := range to {
+			n.SendMessage(ctx, message, address)
+		}
+	}
+}
+
 func (n *BaseNode) SetTimer(ctx context.Context, timer Timer, duration time.Duration) {
 	select {
 	case <-ctx.Done():
