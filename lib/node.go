@@ -9,6 +9,7 @@ import (
 
 type Node interface {
 	// Standard implementations exists (see BaseNode)
+	GetAddress() Address
 	GetState() NodeState
 	AddSubNode(Address, Node)
 	SubNodesInit(context.Context)
@@ -16,9 +17,10 @@ type Node interface {
 	SubNodesHandleTimer(context.Context, TimerTriplet)
 	SubNodesHandleInterrupt(context.Context, InterruptPair) error
 	HandleInterrupt(context.Context, Interrupt) error
-	SendMessage(ctx context.Context, message Message, to Address)
-	BroadcastMessage(ctx context.Context, message Message, to []Address)
-	SetTimer(ctx context.Context, timer Timer, duration time.Duration)
+	SendMessage(context.Context, Message, Address)
+	BroadcastMessage(context.Context, Message, []Address)
+	SetTimer(context.Context, Timer, time.Duration)
+	SendInterrupt(context.Context, Interrupt, Address)
 
 	// To be implemented by user for specific node functionality
 	Init(context.Context)
@@ -48,6 +50,10 @@ func NewBaseNode(sim *Simulation, address Address) *BaseNode {
 		subNodes: make(map[Address]Node),
 		state:    Running,
 	}
+}
+
+func (n *BaseNode) GetAddress() Address {
+	return n.address
 }
 
 func (n *BaseNode) GetState() NodeState {
@@ -143,11 +149,10 @@ func (n *BaseNode) HandleInterrupt(ctx context.Context, interrupt Interrupt) err
 	case SleepInterrupt:
 		data := interrupt.Data.(SleepInterruptData)
 		n.state = Sleeping
-		// Review: Should some sync primitive be used here to make goroutine safe?
 		go func() {
 			<-time.After(data.Duration)
 			startInterrupt := Interrupt{StartInterrupt, nil}
-			n.sim.HandleInterrupt(ctx, InterruptPair{startInterrupt, n.address})
+			n.SendInterrupt(ctx, startInterrupt, n.address)
 		}()
 	case StartInterrupt:
 		n.state = Running
@@ -196,5 +201,17 @@ func (n *BaseNode) SetTimer(ctx context.Context, timer Timer, duration time.Dura
 		n.sim.umlLog.Printf("%v -> %v : %v\n", n.address, n.address, timer.Id)
 		n.sim.debugLog.Printf("SetTimer(%v, %v, %v)\n", n.address, timer.Id, duration)
 		n.sim.TimerQueue <- TimerTriplet{timer, n.address, duration}
+	}
+}
+
+func (n *BaseNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to Address) {
+	select {
+	case <-ctx.Done():
+		n.sim.debugLog.Printf("StopSim.SendInterrupt(%v -> %v, %v)\n", n.address, to, interrupt.Id)
+		return
+	default:
+		n.sim.umlLog.Printf("%v -> %v : %v\n", n.address, to, interrupt.Id)
+		n.sim.debugLog.Printf("SendInterrupt(%v -> %v, %v)\n", n.address, to, interrupt.Id)
+		n.sim.HandleInterrupt(ctx, InterruptPair{interrupt, to})
 	}
 }

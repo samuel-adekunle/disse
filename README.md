@@ -20,8 +20,12 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 ## Pending work
 
 - [ ] Fault Injection
-  - [ ] Allow certain operations on nodes after certain amounts of time: Sleep, Stop, Start, Restart using a separate queues
+  - [X] Allow certain operations on nodes after certain amounts of time: Sleep, Stop, Start, Restart using a separate queues
+  - [ ] Test interrupts in an example
 - [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
+- [ ] Standardize dropping messages
+- [ ] Restrict external access to debugLog and umlLog (think I already do this)
+- [ ] Refactor existing examples
 - [ ] TCP example
   - [ ] File transfer example built on top of TCP
 - [ ] Create detailed project plan

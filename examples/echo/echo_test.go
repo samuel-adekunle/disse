@@ -15,7 +15,8 @@ var echoClient *EchoClient
 func newSim() {
 	echoServerAddress, echoClientAddress := ds.Address("EchoServer"), ds.Address("EchoClient")
 	pingServerAddress, pingClientAddress := echoServerAddress.SubAddress("PingServer"), echoClientAddress.SubAddress("PingClient")
-	pingMessage, pongMessage, echoMessage := ds.Message("Ping"), ds.Message("Pong"), ds.Message("Echo")
+	pingMessage, pongMessage := ds.NewMessage(ds.MessageId("Ping"), nil), ds.NewMessage(ds.MessageId("Pong"), nil)
+	echoMessage := ds.NewMessage(ds.MessageId("Echo"), nil)
 
 	sim = ds.NewSimulationWithBuffer(&ds.BufferSizes{
 		MessageBufferSize: 10,

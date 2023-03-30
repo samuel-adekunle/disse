@@ -16,7 +16,7 @@ type PingServer struct {
 func (n *PingServer) Init(ctx context.Context) {}
 
 func (n *PingServer) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) {
-	if message == n.pingMessage {
+	if message.Id == n.pingMessage.Id {
 		n.PingCounter++
 		n.SendMessage(ctx, n.pongMessage, from)
 	}

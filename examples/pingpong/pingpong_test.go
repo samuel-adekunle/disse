@@ -11,7 +11,7 @@ var pingServer *PingServer
 var pingClient *PingClient
 
 func newSim() {
-	pingMessage, pongMessage := ds.Message("Ping"), ds.Message("Pong")
+	pingMessage, pongMessage := ds.NewMessage(ds.MessageId("Ping"), nil), ds.NewMessage(ds.MessageId("Pong"), nil)
 	serverAddress, clientAddress := ds.Address("PingServer"), ds.Address("PingClient")
 	sim = ds.NewSimulationWithBuffer(&ds.BufferSizes{
 		MessageBufferSize: 5,

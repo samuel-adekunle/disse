@@ -15,7 +15,7 @@ type EchoServer struct {
 func (n *EchoServer) Init(ctx context.Context) {}
 
 func (n *EchoServer) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) {
-	if message == n.echoMessage {
+	if message.Id == n.echoMessage.Id {
 		n.SendMessage(ctx, message, from)
 		n.EchoCounter++
 	}

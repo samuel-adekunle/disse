@@ -8,6 +8,13 @@ type Message struct {
 	Data MessageData
 }
 
+func NewMessage(id MessageId, data MessageData) Message {
+	return Message{
+		Id:   id,
+		Data: data,
+	}
+}
+
 type MessageTriplet struct {
 	Message Message
 	From    Address
