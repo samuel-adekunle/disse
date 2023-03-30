@@ -1,3 +1,3 @@
-module github.com/samuel-adekunle/disse/v0
+module github.com/samuel-adekunle/disse
 
 go 1.20
