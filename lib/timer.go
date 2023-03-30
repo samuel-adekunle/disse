@@ -2,7 +2,13 @@ package lib
 
 import "time"
 
-type Timer string
+type TimerId string
+type TimerData interface{}
+
+type Timer struct {
+	Id   TimerId
+	Data TimerData
+}
 
 type TimerTriplet struct {
 	Timer    Timer

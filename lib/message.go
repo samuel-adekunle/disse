@@ -1,6 +1,12 @@
 package lib
 
-type Message string
+type MessageId string
+type MessageData interface{}
+
+type Message struct {
+	Id   MessageId
+	Data MessageData
+}
 
 type MessageTriplet struct {
 	Message Message

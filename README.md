@@ -36,7 +36,7 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 - [ ] Implement a custom timer to allow pausing, speeding up and slowing down the simulation
 - [ ] Integration / Runtime testing: i.e. invariants like no duplication, no timeout while waiting for response
 - [ ] Interactivity: requires a custom timer that can be paused, sped up or slowed down
-  - [ ] Also allow faults to be injected at runtime
+  - [ ] Also allow faults to be injected at runtime (can be implemented by having a node that listens to stdin and sends messages in system) i.e. UserNode
 - [ ] Model checking with state pruning
 - [ ] Simulator Interface, with extension interfaces like a TCP / UDP simulator (needs more complex types)
   - [ ] Enable to run actual distributed systems using cloud services and test different protocols
