@@ -2,7 +2,6 @@ package disse
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 )
@@ -19,10 +18,10 @@ type Node interface {
 	GetState() NodeState
 	AddSubNode(Address, Node)
 	SubNodesInit(context.Context)
-	SubNodesHandleMessage(context.Context, MessageTriplet)
-	SubNodesHandleTimer(context.Context, TimerTriplet)
-	SubNodesHandleInterrupt(context.Context, InterruptPair) error
-	HandleInterrupt(context.Context, Interrupt) error
+	SubNodesHandleMessage(context.Context, MessageTriplet) (handled bool)
+	SubNodesHandleTimer(context.Context, TimerTriplet) (handled bool)
+	SubNodesHandleInterrupt(context.Context, InterruptPair) (handled bool)
+	HandleInterrupt(context.Context, Interrupt) (handled bool)
 	SendMessage(context.Context, Message, Address)
 	BroadcastMessage(context.Context, Message, []Address)
 	SetTimer(context.Context, Timer, time.Duration)
@@ -31,8 +30,8 @@ type Node interface {
 	// To be implemented by concrete node:
 
 	Init(context.Context)
-	HandleMessage(context.Context, Message, Address)
-	HandleTimer(context.Context, Timer, time.Duration)
+	HandleMessage(context.Context, Message, Address) (handled bool)
+	HandleTimer(context.Context, Timer, time.Duration) (handled bool)
 }
 
 // NodeState is a string that represents the state of a node.
@@ -109,25 +108,26 @@ func (n *AbstractNode) SubNodesInit(ctx context.Context) {
 // If the message is not for the node, the SubNodesHandleMessage method is called recursively to check it's sub nodes for a match.
 //
 // If no match is found or the matching node is not running, the message is dropped.
-func (n *AbstractNode) SubNodesHandleMessage(ctx context.Context, mt MessageTriplet) {
+//
+// If a match is found, and the message is handled successfully, the method returns true, otherwise it returns false.
+func (n *AbstractNode) SubNodesHandleMessage(ctx context.Context, mt MessageTriplet) (handled bool) {
 	if node, ok := n.subNodes[mt.To]; ok {
 		if node.GetState() != Running {
-			n.sim.DropMessage(ctx, mt)
-			return
+			return false
 		}
 		n.sim.debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message.Id)
-		node.HandleMessage(ctx, mt.Message, mt.From)
-	} else {
-		var wg sync.WaitGroup
-		for _, node := range n.subNodes {
-			wg.Add(1)
-			go func(_node Node) {
-				_node.SubNodesHandleMessage(ctx, mt)
-				wg.Done()
-			}(node)
-		}
-		wg.Wait()
+		return node.HandleMessage(ctx, mt.Message, mt.From)
 	}
+	var wg sync.WaitGroup
+	for _, node := range n.subNodes {
+		wg.Add(1)
+		go func(_node Node) {
+			handled = handled || _node.SubNodesHandleMessage(ctx, mt)
+			wg.Done()
+		}(node)
+	}
+	wg.Wait()
+	return handled
 }
 
 // SubNodesHandleTimer handles a timer for all sub nodes.
@@ -137,25 +137,26 @@ func (n *AbstractNode) SubNodesHandleMessage(ctx context.Context, mt MessageTrip
 // If the timer is not for the node, the SubNodesHandleTimer method is called recursively to check it's sub nodes for a match.
 //
 // If no match is found or the matching node is not running, the timer is dropped.
-func (n *AbstractNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet) {
+//
+// If a match is found, the timer is successfully handled, the method returns true, otherwise it returns false.
+func (n *AbstractNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet) (handled bool) {
 	if node, ok := n.subNodes[tt.To]; ok {
 		if node.GetState() != Running {
-			n.sim.DropTimer(ctx, tt)
-			return
+			return false
 		}
 		n.sim.debugLog.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer.Id, tt.Duration)
-		node.HandleTimer(ctx, tt.Timer, tt.Duration)
-	} else {
-		var wg sync.WaitGroup
-		for _, node := range n.subNodes {
-			wg.Add(1)
-			go func(_node Node) {
-				_node.SubNodesHandleTimer(ctx, tt)
-				wg.Done()
-			}(node)
-		}
-		wg.Wait()
+		return node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	}
+	var wg sync.WaitGroup
+	for _, node := range n.subNodes {
+		wg.Add(1)
+		go func(_node Node) {
+			handled = handled || _node.SubNodesHandleTimer(ctx, tt)
+			wg.Done()
+		}(node)
+	}
+	wg.Wait()
+	return handled
 }
 
 // SubNodesHandleInterrupt handles an interrupt for all sub nodes.
@@ -166,27 +167,25 @@ func (n *AbstractNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet)
 //
 // If no match is found or the matching node is not running, the interrupt is dropped.
 //
-// If an unknown interrupt is received, an error is returned.
-func (n *AbstractNode) SubNodesHandleInterrupt(ctx context.Context, ip InterruptPair) (err error) {
+// If an unknown interrupt is received, the interrupt is dropped and the function returns false, otherwise true.
+func (n *AbstractNode) SubNodesHandleInterrupt(ctx context.Context, ip InterruptPair) (handled bool) {
 	if node, ok := n.subNodes[ip.To]; ok {
 		if node.GetState() == Stopped {
-			n.sim.DropInterrupt(ctx, ip)
-			return
+			return false
 		}
 		n.sim.debugLog.Printf("HandleInterrupt(%v, %v)\n", n.address, ip.Interrupt.Id)
-		err = node.HandleInterrupt(ctx, ip.Interrupt)
-	} else {
-		var wg sync.WaitGroup
-		for _, node := range n.subNodes {
-			wg.Add(1)
-			go func(_node Node) {
-				_node.SubNodesHandleInterrupt(ctx, ip)
-				wg.Done()
-			}(node)
-		}
-		wg.Wait()
+		return node.HandleInterrupt(ctx, ip.Interrupt)
 	}
-	return
+	var wg sync.WaitGroup
+	for _, node := range n.subNodes {
+		wg.Add(1)
+		go func(_node Node) {
+			handled = handled || _node.SubNodesHandleInterrupt(ctx, ip)
+			wg.Done()
+		}(node)
+	}
+	wg.Wait()
+	return handled
 }
 
 // HandleInterrupt handles an interrupt received by the node.
@@ -197,11 +196,12 @@ func (n *AbstractNode) SubNodesHandleInterrupt(ctx context.Context, ip Interrupt
 //
 // If the interrupt is a StartInterrupt, the node is resumed, usually after sleeping for a specified duration.
 //
-// If an unknown interrupt is received, an error is returned.
-func (n *AbstractNode) HandleInterrupt(ctx context.Context, interrupt Interrupt) error {
+// If an unknown interrupt is received, the function returns false, otherwise true.
+func (n *AbstractNode) HandleInterrupt(ctx context.Context, interrupt Interrupt) bool {
 	switch interrupt.Id {
 	case StopInterrupt:
 		n.state = Stopped
+		return true
 	case SleepInterrupt:
 		data := interrupt.Data.(SleepInterruptData)
 		n.state = Sleeping
@@ -210,12 +210,13 @@ func (n *AbstractNode) HandleInterrupt(ctx context.Context, interrupt Interrupt)
 			startInterrupt := Interrupt{StartInterrupt, nil}
 			n.SendInterrupt(ctx, startInterrupt, n.address)
 		}()
+		return true
 	case StartInterrupt:
 		n.state = Running
+		return true
 	default:
-		return fmt.Errorf("unknown interrupt: %v", interrupt.Id)
+		return false
 	}
-	return nil
 }
 
 // SendMessage sends a message to another node in the simulation.
@@ -280,6 +281,8 @@ func (n *AbstractNode) SetTimer(ctx context.Context, timer Timer, duration time.
 // Interrupts are handled immediately and do not go through the message queue.
 // See HandleInterrupt for more details on how interrupts are handled.
 //
+// If the interrupt is not handled by the node or one of it's sub nodes, the interrupt is dropped.
+//
 // To delay the handling of an interrupt, use a Timer and call SendInterrupt from the HandleTimer method.
 func (n *AbstractNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to Address) {
 	select {
@@ -289,6 +292,9 @@ func (n *AbstractNode) SendInterrupt(ctx context.Context, interrupt Interrupt, t
 	default:
 		n.sim.umlLog.Printf("%v -> %v : %v\n", n.address, to, interrupt.Id)
 		n.sim.debugLog.Printf("SendInterrupt(%v -> %v, %v)\n", n.address, to, interrupt.Id)
-		n.sim.HandleInterrupt(ctx, InterruptPair{interrupt, to})
+		ip := InterruptPair{interrupt, to}
+		if handled := n.sim.HandleInterrupt(ctx, ip); !handled {
+			n.sim.DropInterrupt(ctx, ip)
+		}
 	}
 }

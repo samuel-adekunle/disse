@@ -1,9 +1,10 @@
 package beb
 
 import (
-	ds "disse"
 	"testing"
 	"time"
+
+	ds "github.com/samuel-adekunle/disse"
 )
 
 var sim *ds.Simulation
@@ -20,13 +21,13 @@ func newSim() {
 
 	sim = ds.NewSimulation()
 	bebServer = &BebServer{
-		BaseNode: ds.NewBaseNode(sim, bebServerAddress),
-		nodes:    bebClientAddresses,
+		AbstractNode: ds.NewAbstractNode(sim, bebServerAddress),
+		nodes:        bebClientAddresses,
 	}
 	bebClients = make([]ds.Node, 0)
 	for i, clientAddress := range bebClientAddresses {
 		bebClients = append(bebClients, &BebClient{
-			BaseNode:     ds.NewBaseNode(sim, clientAddress),
+			AbstractNode: ds.NewAbstractNode(sim, clientAddress),
 			bebServer:    bebServerAddress,
 			messageDelay: time.Second * time.Duration(i),
 		})

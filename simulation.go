@@ -7,9 +7,12 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -21,8 +24,13 @@ const (
 	DefaultDuration          = Infinity
 )
 
-var logFileName string
-var umlFileName string
+const (
+	javaEnvVarName     = "DISSE_JAVA_PATH"
+	plantumlEnvVarName = "DISSE_PLANTUML_JAR"
+)
+
+var logPath string
+var umlPath string
 
 // Init sets up the command line flags for the simulation executable.
 // The log file name is the file where the simulation logs will be written.
@@ -30,20 +38,22 @@ var umlFileName string
 // The UML file name is the file where the UML diagram will be written.
 // The default UML file name is the name of the executable with the .uml extension.
 func init() {
-	workDir, err := os.Getwd()
+	wd, err := os.Getwd()
 	if err != nil {
 		panic(err)
 	}
-	baseFileName := strings.Split(workDir, "/")[len(strings.Split(workDir, "/"))-1]
-	defaultLogFileName := fmt.Sprintf("%s.log", baseFileName)
+	workDir := strings.Split(wd, "/")
+	dirName := workDir[len(workDir)-1]
+
+	defaultLogPath := fmt.Sprintf("%s.log", dirName)
 	logFileNameUsage := "path to log file"
-	defaultUmlFileName := fmt.Sprintf("%s.uml", baseFileName)
+	defaultUmlPath := fmt.Sprintf("%s.uml", dirName)
 	umlFileNameUsage := "path to UML diagram file"
 
-	flag.StringVar(&logFileName, "logfile", defaultLogFileName, "path to log file")
-	flag.StringVar(&logFileName, "l", defaultLogFileName, logFileNameUsage+" (shorthand)")
-	flag.StringVar(&umlFileName, "umlfile", defaultUmlFileName, "path to UML diagram file")
-	flag.StringVar(&umlFileName, "u", defaultUmlFileName, umlFileNameUsage+" (shorthand)")
+	flag.StringVar(&logPath, "logfile", defaultLogPath, "path to log file")
+	flag.StringVar(&logPath, "l", defaultLogPath, logFileNameUsage+" (shorthand)")
+	flag.StringVar(&umlPath, "umlfile", defaultUmlPath, "path to UML diagram file")
+	flag.StringVar(&umlPath, "u", defaultUmlPath, umlFileNameUsage+" (shorthand)")
 }
 
 // Simulation sets up and runs the distributed system simulation.
@@ -115,17 +125,17 @@ func (s *Simulation) AddNodes(addresses []Address, nodes []Node) (err error) {
 // If the node is not running, the message is dropped.
 //
 // If the address does not match the root node, the sub nodes are checked recursively for a match.
-func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) {
+//
+// If the message is successfully handled, true is returned, otherwise false.
+func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) (handled bool) {
 	if node, ok := s.nodes[mt.To]; ok {
 		if node.GetState() != Running {
-			s.DropMessage(ctx, mt)
-			return
+			return false
 		}
 		s.debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message.Id)
-		node.HandleMessage(ctx, mt.Message, mt.From)
-	} else {
-		s.nodes[mt.To.Root()].SubNodesHandleMessage(ctx, mt)
+		return node.HandleMessage(ctx, mt.Message, mt.From)
 	}
+	return s.nodes[mt.To.Root()].SubNodesHandleMessage(ctx, mt)
 }
 
 // DropMessage drops a message.
@@ -138,17 +148,17 @@ func (s *Simulation) DropMessage(ctx context.Context, mt MessageTriplet) {
 // If the node is not running, the timer is dropped.
 //
 // If the address does not match the root node, the sub nodes are checked recursively for a match.
-func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) {
+//
+// If the timer is successfully handled, true is returned, otherwise false.
+func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) (handled bool) {
 	if node, ok := s.nodes[tt.To]; ok {
 		if node.GetState() != Running {
-			s.DropTimer(ctx, tt)
-			return
+			return false
 		}
 		s.debugLog.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer.Id, tt.Duration)
-		node.HandleTimer(ctx, tt.Timer, tt.Duration)
-	} else {
-		s.nodes[tt.To.Root()].SubNodesHandleTimer(ctx, tt)
+		return node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	}
+	return s.nodes[tt.To.Root()].SubNodesHandleTimer(ctx, tt)
 }
 
 // DropTimer drops a timer.
@@ -162,19 +172,16 @@ func (s *Simulation) DropTimer(ctx context.Context, tt TimerTriplet) {
 //
 // If the address does not match the root node, the sub nodes are checked recursively for a match.
 //
-// If an unknown interrupt is received, an error is returned.
-func (s *Simulation) HandleInterrupt(ctx context.Context, ip InterruptPair) (err error) {
+// If an unknown interrupt is received, the interrupt is dropped and the function returns false, otherwise true.
+func (s *Simulation) HandleInterrupt(ctx context.Context, ip InterruptPair) bool {
 	if node, ok := s.nodes[ip.To]; ok {
 		if node.GetState() == Stopped {
-			s.DropInterrupt(ctx, ip)
-			return
+			return false
 		}
 		s.debugLog.Printf("HandleInterrupt(%v, %v)\n", ip.To, ip.Interrupt.Id)
-		err = node.HandleInterrupt(ctx, ip.Interrupt)
-	} else {
-		err = s.nodes[ip.To.Root()].SubNodesHandleInterrupt(ctx, ip)
+		return node.HandleInterrupt(ctx, ip.Interrupt)
 	}
-	return
+	return s.nodes[ip.To.Root()].SubNodesHandleInterrupt(ctx, ip)
 }
 
 // DropInterrupt drops an interrupt.
@@ -199,19 +206,37 @@ func (s *Simulation) stopSim() {
 	close(s.timerQueue)
 }
 
+// generateUmlImage generates a UML image of the simulation using PlantUML (requires java).
+func (s *Simulation) generateUmlImage() {
+	javaPath := os.Getenv(javaEnvVarName)
+	plantumlPath := os.Getenv(plantumlEnvVarName)
+
+	if javaPath == "" || plantumlPath == "" {
+		s.debugLog.Printf("javaPath (%v) or plantumlPath (%v) not set. UML image not generated.\n", javaPath, plantumlPath)
+		return
+	}
+
+	cmd := exec.Command(javaPath, "-jar", plantumlPath, umlPath)
+	err := cmd.Run()
+	if err != nil {
+		s.debugLog.Printf("Error %v when generating UML image. Check if javaPath (%v) and plantumlPath (%v) are correctly set.\n", err, javaPath, plantumlPath)
+	}
+}
+
 // Run runs the simulation.
 //
 // The simulation run by polling the message and timer queues and sending the messages and timers to the appropriate nodes.
 func (s *Simulation) Run() {
 	flag.Parse()
-	logFile, err := os.Create(logFileName)
+	godotenv.Load()
+	logFile, err := os.Create(logPath)
 	if err != nil {
 		panic(err)
 	}
 	defer logFile.Close()
 	s.debugLog = log.New(logFile, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
-	umlFile, err := os.Create(umlFileName)
+	umlFile, err := os.Create(umlPath)
 	if err != nil {
 		panic(err)
 	}
@@ -243,20 +268,25 @@ func (s *Simulation) Run() {
 				s.stopSim()
 				wg.Wait()
 				s.debugLog.Println("EndSim()")
+				s.generateUmlImage()
 				return
 			}
 		case mt := <-s.messageQueue:
 			wg.Add(1)
 			go func() {
 				time.Sleep(s.randomLatency())
-				s.HandleMessage(ctx, mt)
+				if handled := s.HandleMessage(ctx, mt); !handled {
+					s.DropMessage(ctx, mt)
+				}
 				wg.Done()
 			}()
 		case tt := <-s.timerQueue:
 			wg.Add(1)
 			go func() {
 				time.Sleep(tt.Duration)
-				s.HandleTimer(ctx, tt)
+				if handled := s.HandleTimer(ctx, tt); !handled {
+					s.DropTimer(ctx, tt)
+				}
 				wg.Done()
 			}()
 		}
