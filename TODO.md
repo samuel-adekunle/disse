@@ -13,11 +13,10 @@
   - [X] Using [PlantUML](https://plantuml.com/en-dark/sequence-diagram)
 - [X] Unit testing framework for the system
 - [X] Interrupts: Sleep, Start, Stop (Permanent)
+- [X] Standardize dropping messages
 
 ## Pending work
 
-- [ ] Standardize dropping messages
-- [ ] Restrict external access to debugLog and umlLog (think I already do this)
 - [ ] Refactor existing examples (especially tests)
 - [ ] Test interrupts in an example
 - [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
