@@ -16,16 +16,15 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 - [X] Sequence Diagram Visualisation
   - [X] Using [PlantUML](https://plantuml.com/en-dark/sequence-diagram)
 - [X] Unit testing framework for the system
+- [X] Interrupts: Sleep, Start, Stop (Permanent)
 
 ## Pending work
 
-- [ ] Fault Injection
-  - [X] Allow certain operations on nodes after certain amounts of time: Sleep, Stop, Start, Restart using a separate queues
-  - [ ] Test interrupts in an example
-- [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
 - [ ] Standardize dropping messages
 - [ ] Restrict external access to debugLog and umlLog (think I already do this)
-- [ ] Refactor existing examples
+- [ ] Refactor existing examples (especially tests)
+- [ ] Test interrupts in an example
+- [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
 - [ ] TCP example
   - [ ] File transfer example built on top of TCP
 - [ ] Create detailed project plan
@@ -37,6 +36,7 @@ A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
 
 ## Extensions
 
+- [ ] Restart Stopped Nodes Interrupt
 - [ ] Implement a custom timer to allow pausing, speeding up and slowing down the simulation
 - [ ] Integration / Runtime testing: i.e. invariants like no duplication, no timeout while waiting for response
 - [ ] Interactivity: requires a custom timer that can be paused, sped up or slowed down
