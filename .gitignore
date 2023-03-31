@@ -1,8 +1,4 @@
-*.log
 *.ds
-*.uml
-*.png
-*.jar
 .vscode
 .idea
 .env

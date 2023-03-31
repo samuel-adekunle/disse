@@ -1,4 +1,4 @@
-package beb
+package main
 
 import (
 	"context"
@@ -12,6 +12,7 @@ const broadcastMessageId ds.MessageId = "BroadcastMessage"
 type BebServer struct {
 	*ds.AbstractNode
 	nodes []ds.Address
+	Sent  []ds.Message
 }
 
 func (n *BebServer) Init(ctx context.Context) {}
@@ -19,10 +20,11 @@ func (n *BebServer) Init(ctx context.Context) {}
 func (n *BebServer) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Id {
 	case broadcastMessageId:
-		data := message.Data.(ds.Message)
+		broadcastMessage := message.Data.(ds.Message)
 		for _, node := range n.nodes {
-			n.SendMessage(ctx, data, node)
+			n.SendMessage(ctx, broadcastMessage, node)
 		}
+		n.Sent = append(n.Sent, broadcastMessage)
 		return true
 	default:
 		return false

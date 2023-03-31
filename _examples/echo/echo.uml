@@ -1,0 +1,45 @@
+@startuml
+!theme reddress-lightred
+skinparam shadowing false
+skinparam sequenceArrowThickness 1
+skinparam responseMessageBelowArrow true
+skinparam sequenceMessageAlign right
+EchoClient -> EchoClient : EchoTimer
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+EchoClient -> EchoServer : Echo
+EchoClient -> EchoClient : EchoTimer
+EchoServer -> EchoClient : Echo
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+EchoClient -> EchoServer : Echo
+EchoClient -> EchoClient : EchoTimer
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+EchoServer -> EchoClient : Echo
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoClient -> EchoServer : Echo
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+EchoClient -> EchoClient : EchoTimer
+EchoServer -> EchoClient : Echo
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+EchoClient.PingClient -> EchoServer.PingServer : Ping
+EchoClient.PingClient -> EchoClient.PingClient : PingTimer
+EchoServer.PingServer -> EchoClient.PingClient : Pong
+@enduml

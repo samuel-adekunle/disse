@@ -1,4 +1,4 @@
-package beb
+package main
 
 import (
 	"context"
@@ -15,6 +15,7 @@ type BebClient struct {
 	*ds.AbstractNode
 	bebServer    ds.Address
 	messageDelay time.Duration
+	Received     []ds.Message
 }
 
 func (n *BebClient) broadcastMessage() ds.Message {
@@ -32,6 +33,7 @@ func (n *BebClient) Init(ctx context.Context) {
 func (n *BebClient) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Id {
 	case helloMessageId:
+		n.Received = append(n.Received, message)
 		fmt.Printf("%v received message: '%v'\n", n.GetAddress(), message.Data.(string))
 		return true
 	default:

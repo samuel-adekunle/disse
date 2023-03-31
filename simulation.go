@@ -216,6 +216,11 @@ func (s *Simulation) generateUmlImage() {
 		return
 	}
 
+	if umlPath == os.DevNull {
+		s.debugLog.Printf("umlPath (%v) set to /dev/null. UML image not generated.\n", umlPath)
+		return
+	}
+
 	cmd := exec.Command(javaPath, "-jar", plantumlPath, umlPath)
 	err := cmd.Run()
 	if err != nil {
