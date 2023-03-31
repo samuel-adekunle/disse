@@ -18,7 +18,8 @@
 ## Pending work
 
 - [ ] Refactor existing examples (especially tests)
-- [ ] Test interrupts in an example
+  - [ ] Test interrupts & dropped messages in ping
+  - [ ] Test node composition in echo
 - [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
 - [ ] TCP example
   - [ ] File transfer example built on top of TCP
