@@ -245,6 +245,7 @@ func (s *Simulation) Run() {
 	if err != nil {
 		panic(err)
 	}
+	defer s.generateUmlImage()
 	defer umlFile.Close()
 	s.umlLog = log.New(umlFile, "", 0)
 	s.umlLog.Println("@startuml")
@@ -273,7 +274,6 @@ func (s *Simulation) Run() {
 				s.stopSim()
 				wg.Wait()
 				s.debugLog.Println("EndSim()")
-				s.generateUmlImage()
 				return
 			}
 		case mt := <-s.messageQueue:
