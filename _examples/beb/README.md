@@ -46,6 +46,4 @@ DISSE_JAVA_PATH=<path to java executable>
 DISSE_PLANTUML_JAR=<path to plantuml.jar>
 ```
 
-The following png file will be automatically generated in the `beb` directory after running the simulation from the uml file:
-
-![BEB UML Sequence Diagram](beb.png)
+A png file will be automatically generated in the `beb` directory after running the simulation from the uml file.
