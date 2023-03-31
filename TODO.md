@@ -17,22 +17,22 @@
 
 ## Pending work
 
-- [ ] Refactor existing examples (especially tests)
+- [ ] Finish adding examples as documentation of library usage (especially tests)
   - [ ] Test interrupts & dropped messages in ping
   - [ ] Test node composition in echo
-- [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
-- [ ] TCP example
-  - [ ] File transfer example built on top of TCP
+  - [ ] TCP example e.g File Transfer
 - [ ] Create detailed project plan
   - [ ] Find students to test out the tool during summer exams
   - [ ] Feedback collection (More Quantitative vs Qualitative feedback)
   - [ ] Create evaluation plan
     - [ ] Ability to discover faults in existing systems
     - [ ] Speed and writing and deploying new systems
+  - [ ] Start writing report
 
 ## Extensions
 
-- [ ] Restart Stopped Nodes Interrupt
+- [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
+- [ ] Add a Restart Stopped Nodes Interrupt
 - [ ] Implement a custom timer to allow pausing, speeding up and slowing down the simulation
 - [ ] Integration / Runtime testing: i.e. invariants like no duplication, no timeout while waiting for response
 - [ ] Interactivity: requires a custom timer that can be paused, sped up or slowed down
