@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	ds "github.com/samuel-adekunle/disse"
@@ -21,11 +22,14 @@ type BebMessageData struct {
 // BebNode is a node that broadcasts messages to all other nodes.
 type BebNode struct {
 	*ds.AbstractNode
-	nodes []ds.Address
+	nodes           []ds.Address
+	handledMessages map[ds.MessageId]int
 }
 
 // Init is called when the node is initialized by the simulation.
-func (n *BebNode) Init(ctx context.Context) {}
+func (n *BebNode) Init(ctx context.Context) {
+	n.handledMessages = make(map[ds.MessageId]int)
+}
 
 // HandleMessage is called when the node receives a message.
 //
@@ -39,6 +43,10 @@ func (n *BebNode) HandleMessage(ctx context.Context, message ds.Message, from ds
 		n.BroadcastMessage(ctx, data.Message, n.nodes)
 		deliverMessage := ds.NewMessage(deliverMessageType, data.Message)
 		n.SendMessage(ctx, deliverMessage, from)
+		return true
+	case helloMessageType:
+		fmt.Printf("%v received hello: '%v'\n", n.GetAddress(), message.Data.(HelloMessageData))
+		n.handledMessages[message.Id]++
 		return true
 	default:
 		return false

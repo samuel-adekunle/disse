@@ -39,13 +39,25 @@ For usage information, run the following command:
 
 ## Running Tests
 
-In order to run the tests, run the following command in the `beb` directory:
+In order to run the all tests, run the following command in the `beb` directory:
 
 ```bash
-go test . -run TestBeb -v -l beb.log -u /dev/null
+go test . -v -l /dev/null -u /dev/null
 ```
 
-> Note: The `-u /dev/null` flag is used to disable the UML sequence diagram generation.
+> Note: The `-l /dev/null -u /dev/null` flags disable the UML sequence diagram generation and logging.
+
+To run a specific test, run the following command in the `beb` directory:
+
+```bash
+go test . -run <test name> -v -l beb.log -u beb.uml
+```
+
+For example, to run the `TestBeb/TestValidity` test, run the following command:
+
+```bash
+go test . -run TestBeb/TestValidity -v -l beb.log -u beb.uml
+```
 
 ## Generating the UML Sequence Diagram
 

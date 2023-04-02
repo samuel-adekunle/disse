@@ -37,10 +37,7 @@ func initBebSimulation() {
 	sim.Duration = 5 * time.Second
 }
 
-func init() {
-	initBebSimulation()
-}
-
 func main() {
+	initBebSimulation()
 	sim.Run()
 }
