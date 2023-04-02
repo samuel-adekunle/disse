@@ -1,7 +1,16 @@
 package disse
 
-// MessageId is a string that identifies a message type and is used to handle messages appropriately.
+import (
+	"github.com/google/uuid"
+)
+
+// MessageId is a string that uniquely identifies a message in the network.
+//
+// UUID is generated using the github.com/google/uuid package.
 type MessageId string
+
+// MessageType is a string that identifies a message type and is used to handle messages appropriately.
+type MessageType string
 
 // MessageData is the data associated with a message.
 type MessageData interface{}
@@ -9,13 +18,15 @@ type MessageData interface{}
 // Message is a message that is sent to a node.
 type Message struct {
 	Id   MessageId
+	Type MessageType
 	Data MessageData
 }
 
-// NewMessage creates a new message with the given id and data.
-func NewMessage(id MessageId, data MessageData) Message {
+// NewMessage creates a new message with the given messageType and data.
+func NewMessage(messageType MessageType, data MessageData) Message {
 	return Message{
-		Id:   id,
+		Id:   MessageId(uuid.New().String()),
+		Type: messageType,
 		Data: data,
 	}
 }

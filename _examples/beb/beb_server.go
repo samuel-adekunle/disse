@@ -7,7 +7,7 @@ import (
 	ds "github.com/samuel-adekunle/disse"
 )
 
-const broadcastMessageId ds.MessageId = "BroadcastMessage"
+const broadcastMessageId ds.MessageType = "BroadcastMessage"
 
 type BebServer struct {
 	*ds.AbstractNode
@@ -18,7 +18,7 @@ type BebServer struct {
 func (n *BebServer) Init(ctx context.Context) {}
 
 func (n *BebServer) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
-	switch message.Id {
+	switch message.Type {
 	case broadcastMessageId:
 		broadcastMessage := message.Data.(ds.Message)
 		for _, node := range n.nodes {
@@ -32,7 +32,7 @@ func (n *BebServer) HandleMessage(ctx context.Context, message ds.Message, from 
 }
 
 func (n *BebServer) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) bool {
-	switch timer.Id {
+	switch timer.Type {
 	default:
 		return false
 	}

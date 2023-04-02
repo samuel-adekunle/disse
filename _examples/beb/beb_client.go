@@ -8,8 +8,8 @@ import (
 	ds "github.com/samuel-adekunle/disse"
 )
 
-const helloMessageId ds.MessageId = "HelloMessage"
-const helloTimerId ds.TimerId = "HelloTimer"
+const helloMessageId ds.MessageType = "HelloMessage"
+const helloTimerId ds.TimerType = "HelloTimer"
 
 type BebClient struct {
 	*ds.AbstractNode
@@ -31,7 +31,7 @@ func (n *BebClient) Init(ctx context.Context) {
 }
 
 func (n *BebClient) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
-	switch message.Id {
+	switch message.Type {
 	case helloMessageId:
 		n.Received = append(n.Received, message)
 		fmt.Printf("%v received message: '%v'\n", n.GetAddress(), message.Data.(string))
@@ -42,7 +42,7 @@ func (n *BebClient) HandleMessage(ctx context.Context, message ds.Message, from 
 }
 
 func (n *BebClient) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) bool {
-	switch timer.Id {
+	switch timer.Type {
 	case helloTimerId:
 		n.SendMessage(ctx, timer.Data.(ds.Message), n.bebServer)
 		return true

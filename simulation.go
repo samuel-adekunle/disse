@@ -132,7 +132,7 @@ func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) (hand
 		if node.GetState() != Running {
 			return false
 		}
-		s.debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message.Id)
+		s.debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 		return node.HandleMessage(ctx, mt.Message, mt.From)
 	}
 	return s.nodes[mt.To.Root()].SubNodesHandleMessage(ctx, mt)
@@ -140,7 +140,7 @@ func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) (hand
 
 // DropMessage drops a message.
 func (s *Simulation) DropMessage(ctx context.Context, mt MessageTriplet) {
-	s.debugLog.Printf("DropMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message.Id)
+	s.debugLog.Printf("DropMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 }
 
 // HandleTimer handles a timer by sending it to the appropriate node.
@@ -155,7 +155,7 @@ func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) (handled 
 		if node.GetState() != Running {
 			return false
 		}
-		s.debugLog.Printf("HandleTimer(%v, %v, %v)\n", tt.To, tt.Timer.Id, tt.Duration)
+		s.debugLog.Printf("HandleTimer(-> %v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
 		return node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	}
 	return s.nodes[tt.To.Root()].SubNodesHandleTimer(ctx, tt)
@@ -163,7 +163,7 @@ func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) (handled 
 
 // DropTimer drops a timer.
 func (s *Simulation) DropTimer(ctx context.Context, tt TimerTriplet) {
-	s.debugLog.Printf("DropTimer(%v, %v, %v)\n", tt.To, tt.Timer.Id, tt.Duration)
+	s.debugLog.Printf("DropTimer(-> %v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
 }
 
 // HandleInterrupt handles an interrupt by sending it to the appropriate node.
@@ -178,7 +178,7 @@ func (s *Simulation) HandleInterrupt(ctx context.Context, ip InterruptPair) bool
 		if node.GetState() == Stopped {
 			return false
 		}
-		s.debugLog.Printf("HandleInterrupt(%v, %v)\n", ip.To, ip.Interrupt.Id)
+		s.debugLog.Printf("HandleInterrupt(-> %v, %v)\n", ip.To, ip.Interrupt)
 		return node.HandleInterrupt(ctx, ip.Interrupt)
 	}
 	return s.nodes[ip.To.Root()].SubNodesHandleInterrupt(ctx, ip)
@@ -186,7 +186,7 @@ func (s *Simulation) HandleInterrupt(ctx context.Context, ip InterruptPair) bool
 
 // DropInterrupt drops an interrupt.
 func (s *Simulation) DropInterrupt(ctx context.Context, ip InterruptPair) {
-	s.debugLog.Printf("DropInterrupt(%v, %v)\n", ip.To, ip.Interrupt.Id)
+	s.debugLog.Printf("DropInterrupt(-> %v, %v)\n", ip.To, ip.Interrupt)
 }
 
 // startSim starts the simulation by initializing all nodes and sub nodes.
