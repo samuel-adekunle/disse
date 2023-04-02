@@ -1,7 +1,19 @@
 # Best Effort Broadcast (BEB) Example
 
 This example shows how to use the DISSE library to simulate a Best Effort Broadcast (BEB) module which sends
-received packets to all other nodes in the network.
+received packets to all other nodes in the network, including itself.
+
+## Specification
+
+With best-effort broadcast, the burden of ensuring reliability is only on the sender.
+Therefore, the remaining processes do not have to be concerned with enforcingthe reliability of received messages.
+On the other hand, no delivery guarantees are offered in case the sender fails.
+
+### Module properties
+
+- **Validity:** If a correct node broadcasts a message, then all correct nodes eventually handle that message.
+- **No duplication:** No message is handled more than once by a correct node.
+- **No creation:** If a correct node handles a message, then that message was previously broadcast by some correct node.
 
 ## Running Simulation
 

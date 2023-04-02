@@ -139,6 +139,8 @@ func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) (hand
 }
 
 // DropMessage drops a message.
+//
+// This means the message is not handled by any node.
 func (s *Simulation) DropMessage(ctx context.Context, mt MessageTriplet) {
 	s.debugLog.Printf("DropMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 }
@@ -162,6 +164,8 @@ func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) (handled 
 }
 
 // DropTimer drops a timer.
+//
+// This means the timer is not handled by any node.
 func (s *Simulation) DropTimer(ctx context.Context, tt TimerTriplet) {
 	s.debugLog.Printf("DropTimer(-> %v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
 }
@@ -185,6 +189,8 @@ func (s *Simulation) HandleInterrupt(ctx context.Context, ip InterruptPair) bool
 }
 
 // DropInterrupt drops an interrupt.
+//
+// This means the interrupt is not handled by any node.
 func (s *Simulation) DropInterrupt(ctx context.Context, ip InterruptPair) {
 	s.debugLog.Printf("DropInterrupt(-> %v, %v)\n", ip.To, ip.Interrupt)
 }

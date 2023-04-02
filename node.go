@@ -236,7 +236,9 @@ func (n *AbstractNode) SendMessage(ctx context.Context, message Message, to Addr
 		n.sim.debugLog.Printf("SendMessage(%v -> %v, %v)\n", n.address, to, message)
 		mt := MessageTriplet{message, n.address, to}
 		if to.Root() == n.address.Root() {
-			n.sim.HandleMessage(ctx, mt)
+			if handled := n.sim.HandleMessage(ctx, mt); !handled {
+				n.sim.DropMessage(ctx, mt)
+			}
 		} else {
 			n.sim.messageQueue <- mt
 		}

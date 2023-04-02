@@ -32,6 +32,7 @@
 ## Extensions
 
 - [ ] Busy nodes? Consider only handling messages when the node is not busy i.e. Need to keep track of busy nodes
+- [ ] Introduce more network effects like packet loss, packet corruption, packet reordering, jitter
 - [ ] Add a Restart Stopped Nodes Interrupt
 - [ ] Implement a custom timer to allow pausing, speeding up and slowing down the simulation
 - [ ] Integration / Runtime testing: i.e. invariants like no duplication, no timeout while waiting for response
