@@ -1,9 +1,18 @@
 package disse
 
-import "time"
+import (
+	"time"
 
-// TimerId is a string that identifies a timer type and is used to handle timers appropriately.
+	"github.com/google/uuid"
+)
+
+// TimerId is a string that uniquely identifies an interrupt in the network.
+//
+// It is generated using the github.com/google/uuid package.
 type TimerId string
+
+// TimerType is a string that identifies a timer type and is used to handle timers appropriately.
+type TimerType string
 
 // TimerData is the data associated with a timer.
 type TimerData interface{}
@@ -11,13 +20,15 @@ type TimerData interface{}
 // Timer is a message that is sent to a node after a certain amount of time to trigger certain events.
 type Timer struct {
 	Id   TimerId
+	Type TimerType
 	Data TimerData
 }
 
-// NewTimer creates a new timer with the given id and data.
-func NewTimer(id TimerId, data TimerData) Timer {
+// NewTimer creates a new timer with the given timer type and data.
+func NewTimer(timerType TimerType, data TimerData) Timer {
 	return Timer{
-		Id:   id,
+		Id:   TimerId(uuid.New().String()),
+		Type: timerType,
 		Data: data,
 	}
 }

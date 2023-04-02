@@ -2,4 +2,6 @@
 
 A discrete event simulation library for distributed systems.
 
-A lot of inspiration from [DS Labs](https://github.com/emichael/dslabs).
+View the documentation [here](https://pkg.go.dev/github.com/samuel-adekunle/disse).
+
+View the examples in the `_examples` directory to see how to use the library.
