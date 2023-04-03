@@ -29,8 +29,13 @@ const (
 	plantumlEnvVarName = "DISSE_PLANTUML_JAR"
 )
 
-var logPath string
-var umlPath string
+// debugLog is the log used for debug messages.
+var debugLog *log.Logger
+var debugLogPath string
+
+// umlLog is the log used for UML messages.
+var umlLog *log.Logger
+var umlLogPath string
 
 // Init sets up the command line flags for the simulation executable.
 // The log file name is the file where the simulation logs will be written.
@@ -50,17 +55,15 @@ func init() {
 	defaultUmlPath := fmt.Sprintf("%s.uml", dirName)
 	umlFileNameUsage := "path to UML diagram file"
 
-	flag.StringVar(&logPath, "logfile", defaultLogPath, "path to log file")
-	flag.StringVar(&logPath, "l", defaultLogPath, logFileNameUsage+" (shorthand)")
-	flag.StringVar(&umlPath, "umlfile", defaultUmlPath, "path to UML diagram file")
-	flag.StringVar(&umlPath, "u", defaultUmlPath, umlFileNameUsage+" (shorthand)")
+	flag.StringVar(&debugLogPath, "logfile", defaultLogPath, "path to log file")
+	flag.StringVar(&debugLogPath, "l", defaultLogPath, logFileNameUsage+" (shorthand)")
+	flag.StringVar(&umlLogPath, "umlfile", defaultUmlPath, "path to UML diagram file")
+	flag.StringVar(&umlLogPath, "u", defaultUmlPath, umlFileNameUsage+" (shorthand)")
 }
 
 // Simulation sets up and runs the distributed system simulation.
 type Simulation struct {
 	nodes        map[Address]Node
-	debugLog     *log.Logger
-	umlLog       *log.Logger
 	messageQueue chan MessageTriplet
 	timerQueue   chan TimerTriplet
 	MinLatency   time.Duration
@@ -132,7 +135,7 @@ func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) (hand
 		if node.GetState() != Running {
 			return false
 		}
-		s.debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+		debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 		return node.HandleMessage(ctx, mt.Message, mt.From)
 	}
 	return s.nodes[mt.To.Root()].SubNodesHandleMessage(ctx, mt)
@@ -142,7 +145,7 @@ func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) (hand
 //
 // This means the message is not handled by any node.
 func (s *Simulation) DropMessage(ctx context.Context, mt MessageTriplet) {
-	s.debugLog.Printf("DropMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+	debugLog.Printf("DropMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
 }
 
 // HandleTimer handles a timer by sending it to the appropriate node.
@@ -157,7 +160,7 @@ func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) (handled 
 		if node.GetState() != Running {
 			return false
 		}
-		s.debugLog.Printf("HandleTimer(-> %v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
+		debugLog.Printf("HandleTimer(-> %v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
 		return node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	}
 	return s.nodes[tt.To.Root()].SubNodesHandleTimer(ctx, tt)
@@ -167,7 +170,7 @@ func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) (handled 
 //
 // This means the timer is not handled by any node.
 func (s *Simulation) DropTimer(ctx context.Context, tt TimerTriplet) {
-	s.debugLog.Printf("DropTimer(-> %v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
+	debugLog.Printf("DropTimer(-> %v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
 }
 
 // HandleInterrupt handles an interrupt by sending it to the appropriate node.
@@ -182,7 +185,7 @@ func (s *Simulation) HandleInterrupt(ctx context.Context, ip InterruptPair) bool
 		if node.GetState() == Stopped {
 			return false
 		}
-		s.debugLog.Printf("HandleInterrupt(-> %v, %v)\n", ip.To, ip.Interrupt)
+		debugLog.Printf("HandleInterrupt(-> %v, %v)\n", ip.To, ip.Interrupt)
 		return node.HandleInterrupt(ctx, ip.Interrupt)
 	}
 	return s.nodes[ip.To.Root()].SubNodesHandleInterrupt(ctx, ip)
@@ -192,14 +195,14 @@ func (s *Simulation) HandleInterrupt(ctx context.Context, ip InterruptPair) bool
 //
 // This means the interrupt is not handled by any node.
 func (s *Simulation) DropInterrupt(ctx context.Context, ip InterruptPair) {
-	s.debugLog.Printf("DropInterrupt(-> %v, %v)\n", ip.To, ip.Interrupt)
+	debugLog.Printf("DropInterrupt(-> %v, %v)\n", ip.To, ip.Interrupt)
 }
 
 // startSim starts the simulation by initializing all nodes and sub nodes.
 func (s *Simulation) startSim(ctx context.Context) {
-	s.debugLog.Printf("StartSim(%v)\n", s.Duration)
+	debugLog.Printf("StartSim(%v)\n", s.Duration)
 	for address, node := range s.nodes {
-		s.debugLog.Printf("Init(%v)\n", address)
+		debugLog.Printf("Init(%v)\n", address)
 		node.Init(ctx)
 		node.SubNodesInit(ctx)
 	}
@@ -207,7 +210,7 @@ func (s *Simulation) startSim(ctx context.Context) {
 
 // stopSim stops the simulation by closing the message and timer queues and waiting for all nodes to stop doing work.
 func (s *Simulation) stopSim() {
-	s.debugLog.Println("StopSim()")
+	debugLog.Println("StopSim()")
 	close(s.messageQueue)
 	close(s.timerQueue)
 }
@@ -218,19 +221,19 @@ func (s *Simulation) generateUmlImage() {
 	plantumlPath := os.Getenv(plantumlEnvVarName)
 
 	if javaPath == "" || plantumlPath == "" {
-		s.debugLog.Printf("javaPath (%v) or plantumlPath (%v) not set. UML image not generated.\n", javaPath, plantumlPath)
+		debugLog.Printf("javaPath (%v) or plantumlPath (%v) not set. UML image not generated.\n", javaPath, plantumlPath)
 		return
 	}
 
-	if umlPath == os.DevNull {
-		s.debugLog.Printf("umlPath (%v) set to /dev/null. UML image not generated.\n", umlPath)
+	if umlLogPath == os.DevNull {
+		debugLog.Printf("umlPath (%v) set to /dev/null. UML image not generated.\n", umlLogPath)
 		return
 	}
 
-	cmd := exec.Command(javaPath, "-jar", plantumlPath, umlPath)
+	cmd := exec.Command(javaPath, "-jar", plantumlPath, umlLogPath)
 	err := cmd.Run()
 	if err != nil {
-		s.debugLog.Printf("Error %v when generating UML image. Check if javaPath (%v) and plantumlPath (%v) are correctly set.\n", err, javaPath, plantumlPath)
+		debugLog.Printf("Error %v when generating UML image. Check if javaPath (%v) and plantumlPath (%v) are correctly set.\n", err, javaPath, plantumlPath)
 	}
 }
 
@@ -240,27 +243,27 @@ func (s *Simulation) generateUmlImage() {
 func (s *Simulation) Run() {
 	flag.Parse()
 	godotenv.Load()
-	logFile, err := os.Create(logPath)
+	logFile, err := os.Create(debugLogPath)
 	if err != nil {
 		panic(err)
 	}
 	defer logFile.Close()
-	s.debugLog = log.New(logFile, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
+	debugLog = log.New(logFile, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
-	umlFile, err := os.Create(umlPath)
+	umlFile, err := os.Create(umlLogPath)
 	if err != nil {
 		panic(err)
 	}
 	defer s.generateUmlImage()
 	defer umlFile.Close()
-	s.umlLog = log.New(umlFile, "", 0)
-	s.umlLog.Println("@startuml")
-	s.umlLog.Println("!theme reddress-lightred")
-	s.umlLog.Println("skinparam shadowing false")
-	s.umlLog.Println("skinparam sequenceArrowThickness 1")
-	s.umlLog.Println("skinparam responseMessageBelowArrow true")
-	s.umlLog.Println("skinparam sequenceMessageAlign right")
-	defer s.umlLog.Println("@enduml")
+	umlLog = log.New(umlFile, "", 0)
+	umlLog.Println("@startuml")
+	umlLog.Println("!theme reddress-lightred")
+	umlLog.Println("skinparam shadowing false")
+	umlLog.Println("skinparam sequenceArrowThickness 1")
+	umlLog.Println("skinparam responseMessageBelowArrow true")
+	umlLog.Println("skinparam sequenceMessageAlign right")
+	defer umlLog.Println("@enduml")
 
 	var ctx context.Context
 	if s.Duration == Infinity {
@@ -279,7 +282,7 @@ func (s *Simulation) Run() {
 			if s.Duration != Infinity {
 				s.stopSim()
 				wg.Wait()
-				s.debugLog.Println("EndSim()")
+				debugLog.Println("EndSim()")
 				return
 			}
 		case mt := <-s.messageQueue:
