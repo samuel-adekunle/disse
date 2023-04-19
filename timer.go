@@ -1,6 +1,7 @@
 package disse
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,10 +25,15 @@ type Timer struct {
 	Data TimerData
 }
 
+// String returns a string representation of the timer for debugging purposes.
+func (m Timer) String() string {
+	return fmt.Sprintf("%v(%v, %v)", m.Type, m.Id, m.Data)
+}
+
 // NewTimer creates a new timer with the given timer type and data.
 func NewTimer(timerType TimerType, data TimerData) Timer {
 	return Timer{
-		Id:   TimerId(uuid.New().String()),
+		Id:   TimerId(uuid.NewString()),
 		Type: timerType,
 		Data: data,
 	}

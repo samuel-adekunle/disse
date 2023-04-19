@@ -42,10 +42,8 @@ For usage information, run the following command:
 In order to run the all tests, run the following command in the `beb` directory:
 
 ```bash
-go test . -v -l /dev/null -u /dev/null
+go test . -v
 ```
-
-> Note: The `-l /dev/null -u /dev/null` flags disable the UML sequence diagram generation and logging.
 
 To run a specific test, run the following command in the `beb` directory:
 
@@ -66,8 +64,8 @@ In order to generate the UML sequence diagram, you need to download the PlantUML
 Then, create a .env file in the `beb` directory and add following lines:
 
 ```bash
-DISSE_JAVA_PATH=<path to java executable>
-DISSE_PLANTUML_JAR=<path to plantuml.jar>
+DISSE_JAVA=<path to java executable>
+DISSE_PLANTUML=<path to plantuml.jar>
 ```
 
 A png file will be automatically generated in the `beb` directory after running the simulation from the uml file.

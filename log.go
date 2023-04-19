@@ -151,7 +151,7 @@ func (l *UmlLog) LogNodeState(node Node) {}
 
 // LogSendMessage is called when a message is sent.
 func (l *UmlLog) LogSendMessage(from, to Address, message Message) {
-	l.log.Printf("%v -> %v : %v\n", from, to, message)
+	l.log.Printf("%v -> %v : %v\n", from, to, message.Type)
 }
 
 // LogHandleMessage is called when a message is handled.
@@ -162,7 +162,7 @@ func (l *UmlLog) LogDropMessage(from, to Address, message Message) {}
 
 // LogSetTimer is called when a timer is set.
 func (l *UmlLog) LogSetTimer(to Address, timer Timer, duration time.Duration) {
-	l.log.Printf("%v -> %v : %v\n", to, to, timer)
+	l.log.Printf("%v -> %v : %v\n", to, to, timer.Type)
 }
 
 // LogHandleTimer is called when a timer is handled.
@@ -173,7 +173,7 @@ func (l *UmlLog) LogDropTimer(to Address, timer Timer, duration time.Duration) {
 
 // LogSendInterrupt is called when an interrupt is sent.
 func (l *UmlLog) LogSendInterrupt(from, to Address, interrupt Interrupt) {
-	l.log.Printf("%v -> %v : %v\n", from, to, interrupt)
+	l.log.Printf("%v -> %v : %v\n", from, to, interrupt.Type)
 }
 
 // LogHandleInterrupt is called when an interrupt is handled.

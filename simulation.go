@@ -119,6 +119,11 @@ func (s *Simulation) AddNodes(addresses []Address, nodes []Node) (err error) {
 	return nil
 }
 
+// RemoveNode removes a node from the simulation.
+func (s *Simulation) RemoveNode(address Address) {
+	delete(s.nodes, address)
+}
+
 // handleMessages handles a message once the appropriate node is found.
 //
 // If the node is not running, the message is dropped.

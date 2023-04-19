@@ -20,6 +20,11 @@ const helloTimerType ds.TimerType = "HelloTimer"
 // HelloTimerData is the data of a hello timer.
 type HelloTimerData ds.Message
 
+// String returns a string representation of the timer data for debugging purposes.
+func (d HelloTimerData) String() string {
+	return fmt.Sprintf("%v", ds.Message(d))
+}
+
 // HelloNode is a node that sends a hello message to all nodes in the network after an initial delay.
 //
 // The hello message is sent using the Best-Effort Broadcast (BEB) primitive.

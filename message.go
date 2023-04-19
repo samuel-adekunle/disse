@@ -1,6 +1,8 @@
 package disse
 
 import (
+	"fmt"
+
 	"github.com/google/uuid"
 )
 
@@ -22,10 +24,15 @@ type Message struct {
 	Data MessageData
 }
 
+// String returns a string representation of the message for debugging purposes.
+func (m Message) String() string {
+	return fmt.Sprintf("%v(%v, %v)", m.Type, m.Id, m.Data)
+}
+
 // NewMessage creates a new message with the given messageType and data.
 func NewMessage(messageType MessageType, data MessageData) Message {
 	return Message{
-		Id:   MessageId(uuid.New().String()),
+		Id:   MessageId(uuid.NewString()),
 		Type: messageType,
 		Data: data,
 	}

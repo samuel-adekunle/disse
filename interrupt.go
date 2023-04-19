@@ -1,6 +1,7 @@
 package disse
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,10 +33,15 @@ type Interrupt struct {
 	Data InterruptData
 }
 
+// String returns a string representation of the interrupt for debugging purposes.
+func (i Interrupt) String() string {
+	return fmt.Sprintf("%v(%v, %v)", i.Type, i.Id, i.Data)
+}
+
 // NewInterrupt creates a new interrupt with the given interrupt type and data.
 func NewInterrupt(interruptType InterruptType, data InterruptData) Interrupt {
 	return Interrupt{
-		Id:   InterruptId(uuid.New().String()),
+		Id:   InterruptId(uuid.NewString()),
 		Type: interruptType,
 		Data: data,
 	}

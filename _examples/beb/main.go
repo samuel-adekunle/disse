@@ -11,14 +11,16 @@ var debugLogPath string
 var umlLogPath string
 
 // init sets up the command line flags for the simulation executable.
+//
 // The log file name is the file where the simulation logs will be written.
-// The default log file name is the name of the executable with the .log extension.
+//
 // The UML file name is the file where the UML diagram will be written.
-// The default UML file name is the name of the executable with the .uml extension.
+//
+// By default both logs are disabled (by setting their output to /dev/null) and the UML diagram is not generated.
 func init() {
-	defaultLogPath := ""
+	defaultLogPath := "/dev/null"
 	logFileNameUsage := "path to log file"
-	defaultUmlPath := ""
+	defaultUmlPath := "/dev/null"
 	umlFileNameUsage := "path to UML diagram file"
 
 	flag.StringVar(&debugLogPath, "logfile", defaultLogPath, "path to log file")
@@ -30,6 +32,7 @@ func init() {
 var sim *ds.Simulation
 var beb *BebNode
 var helloNodes []ds.Node
+var faultyHelloNode *FaultyHelloNode
 
 // initBebSimulation initializes the simulation.
 func initBebSimulation() {
