@@ -19,6 +19,11 @@ type BebMessageData struct {
 	Message ds.Message
 }
 
+// String returns a string representation of the message data for debugging purposes.
+func (d BebMessageData) String() string {
+	return fmt.Sprintf("%v", ds.Message(d.Message))
+}
+
 // BebNode is a node that broadcasts messages to all other nodes.
 type BebNode struct {
 	*ds.AbstractNode

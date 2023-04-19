@@ -1,6 +1,7 @@
 package disse
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -32,10 +33,15 @@ type Interrupt struct {
 	Data InterruptData
 }
 
+// String returns a string representation of the interrupt for debugging purposes.
+func (i Interrupt) String() string {
+	return fmt.Sprintf("%v(%v, %v)", i.Type, i.Id, i.Data)
+}
+
 // NewInterrupt creates a new interrupt with the given interrupt type and data.
 func NewInterrupt(interruptType InterruptType, data InterruptData) Interrupt {
 	return Interrupt{
-		Id:   InterruptId(uuid.New().String()),
+		Id:   InterruptId(uuid.NewString()),
 		Type: interruptType,
 		Data: data,
 	}
@@ -46,8 +52,9 @@ type SleepInterruptData struct {
 	Duration time.Duration
 }
 
-// InterruptPair is a pair of an interrupt and the address of the node to which it should be sent.
-type InterruptPair struct {
+// InterruptTriplet is a triplet of an interrupt, the address of the node that sent the interrupt and the address of the node that received the interrupt.
+type InterruptTriplet struct {
 	Interrupt Interrupt
+	From      Address
 	To        Address
 }

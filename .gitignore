@@ -1,9 +1,10 @@
-*.log
-*.ds
-*.uml
-*.png
-*.jar
+# IDE files
 .vscode
 .idea
+
+# Output files
+*.log
+*.uml
+*.ds
+*.png
 .env
-TODO.md
