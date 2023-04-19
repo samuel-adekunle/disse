@@ -32,8 +32,6 @@ type Log interface {
 }
 
 // DebugLog is a Log implementation that logs debug messages to a file.
-//
-// The messages are user readable and contain the time, the file and the line number.
 type DebugLog struct {
 	log *log.Logger
 }
@@ -42,7 +40,7 @@ type DebugLog struct {
 func NewDebugLog(logPath string) *DebugLog {
 	const (
 		prefix = ""
-		flag   = log.Ldate | log.Lmicroseconds | log.Lshortfile
+		flag   = log.Ldate | log.Lmicroseconds
 	)
 	logfile, err := os.Create(logPath)
 	if err != nil {
@@ -110,8 +108,6 @@ func (l *DebugLog) LogDropInterrupt(from, to Address, interrupt Interrupt) {
 }
 
 // UmlLog is a Log implementation that logs messages in the PlantUML format.
-//
-// The messages are machine readable and can be used to generate UML images.
 type UmlLog struct {
 	log *log.Logger
 }

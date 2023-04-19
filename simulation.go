@@ -13,15 +13,15 @@ import (
 )
 
 // SimulationState is the state of the simulation.
-type SimulationState int
+type SimulationState string
 
 const (
 	// SimulationStateNotStarted is the state of the simulation before it is started.
-	SimulationNotStarted SimulationState = iota
+	SimulationNotStarted SimulationState = "Not Started"
 	// SimulationRunning is the state of the simulation while it is running.
-	SimulationRunning
+	SimulationRunning SimulationState = "Running"
 	// SimulationStateFinished is the state of the simulation after it is finished.
-	SimulationFinished
+	SimulationFinished SimulationState = "Finished"
 )
 
 // SimulationOptions is used to set the options for the simulation.
@@ -145,6 +145,11 @@ func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) bool 
 	if _, ok := s.nodes[mt.To.Root()]; !ok {
 		return false
 	}
+
+	if mt.To == mt.To.Root() {
+		return s.handleMessage(ctx, s.nodes[mt.To], mt)
+	}
+
 	return s.nodes[mt.To.Root()].FindMessageHandler(ctx, mt)
 }
 
@@ -179,6 +184,11 @@ func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) bool {
 	if _, ok := s.nodes[tt.To.Root()]; !ok {
 		return false
 	}
+
+	if tt.To == tt.To.Root() {
+		return s.handleTimer(ctx, s.nodes[tt.To], tt)
+	}
+
 	return s.nodes[tt.To.Root()].FindTimerHandler(ctx, tt)
 }
 
@@ -194,12 +204,16 @@ func (s *Simulation) DropTimer(ctx context.Context, tt TimerTriplet) {
 // If the node is not running, the interrupt is dropped.
 //
 // If the interrupt is successfully handled, true is returned, otherwise false.
-func (s *Simulation) handleInterrupt(ctx context.Context, node Node, it InterruptTriplet) bool {
+func (s *Simulation) handleInterrupt(ctx context.Context, node Node, it InterruptTriplet) (handled bool) {
 	if node.GetState() != Running {
 		return false
 	}
 	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
-	return node.HandleInterrupt(ctx, it.Interrupt, it.From)
+	handled = node.HandleInterrupt(ctx, it.Interrupt, it.From)
+	if handled {
+		s.LogNodeState(node)
+	}
+	return handled
 }
 
 // HandleInterrupt handles an interrupt by sending it to the appropriate node.
@@ -213,6 +227,11 @@ func (s *Simulation) HandleInterrupt(ctx context.Context, it InterruptTriplet) b
 	if _, ok := s.nodes[it.To.Root()]; !ok {
 		return false
 	}
+
+	if it.To == it.To.Root() {
+		return s.handleInterrupt(ctx, s.nodes[it.To], it)
+	}
+
 	return s.nodes[it.To.Root()].FindInterruptHandler(ctx, it)
 }
 
@@ -257,8 +276,6 @@ func (s *Simulation) stopSim() {
 //
 // The simulation run by polling the message and timer queues and sending the messages and timers to the appropriate nodes.
 func (s *Simulation) Run() {
-	godotenv.Load()
-
 	var ctx context.Context
 	if s.options.Duration == Infinity {
 		ctx = context.Background()
@@ -301,15 +318,18 @@ func (s *Simulation) Run() {
 	}
 }
 
-var (
-	javaEnv     = "DISSE_JAVA"
-	plantumlEnv = "DISSE_PLANTUML"
+const (
+	// JavaEnv is the environment variable name for the java executable.
+	JavaEnv = "DISSE_JAVA"
+	// PlantumlEnv is the environment variable name for the plantuml jar file.
+	PlantumlEnv = "DISSE_PLANTUML"
 )
 
 // generateUmlImage generates a UML image of the simulation using PlantUML (requires java).
 func (s *Simulation) generateUmlImage() {
-	javaPath := os.Getenv(javaEnv)
-	plantumlPath := os.Getenv(plantumlEnv)
+	godotenv.Load()
+	javaPath := os.Getenv(JavaEnv)
+	plantumlPath := os.Getenv(PlantumlEnv)
 
 	if javaPath == "" || plantumlPath == "" {
 		fmt.Printf("javaPath (%v) or plantumlPath (%v) not set. UML image not generated.\n", javaPath, plantumlPath)

@@ -1,10 +1,31 @@
 package main
 
 import (
+	"flag"
 	"time"
 
 	ds "github.com/samuel-adekunle/disse"
 )
+
+var debugLogPath string
+var umlLogPath string
+
+// init sets up the command line flags for the simulation executable.
+// The log file name is the file where the simulation logs will be written.
+// The default log file name is the name of the executable with the .log extension.
+// The UML file name is the file where the UML diagram will be written.
+// The default UML file name is the name of the executable with the .uml extension.
+func init() {
+	defaultLogPath := ""
+	logFileNameUsage := "path to log file"
+	defaultUmlPath := ""
+	umlFileNameUsage := "path to UML diagram file"
+
+	flag.StringVar(&debugLogPath, "logfile", defaultLogPath, "path to log file")
+	flag.StringVar(&debugLogPath, "l", defaultLogPath, logFileNameUsage+" (shorthand)")
+	flag.StringVar(&umlLogPath, "umlfile", defaultUmlPath, "path to UML diagram file")
+	flag.StringVar(&umlLogPath, "u", defaultUmlPath, umlFileNameUsage+" (shorthand)")
+}
 
 var sim *ds.Simulation
 var beb *BebNode
@@ -19,7 +40,15 @@ func initBebSimulation() {
 		ds.Address("HelloNode3"),
 	}
 
-	sim = ds.NewSimulation()
+	sim = ds.NewSimulation(&ds.SimulationOptions{
+		MinLatency:        ds.DefaultMinLatency,
+		MaxLatency:        ds.DefaultMaxLatency,
+		MessageBufferSize: ds.DefaultMessageBufferSize,
+		TimerBufferSize:   ds.DefaultTimerBufferSize,
+		DebugLogPath:      debugLogPath,
+		UmlLogPath:        umlLogPath,
+		Duration:          5 * time.Second,
+	})
 	beb = &BebNode{
 		AbstractNode: ds.NewAbstractNode(sim, bebAddress),
 		nodes:        append(helloNodeAddresses, bebAddress),
@@ -34,10 +63,10 @@ func initBebSimulation() {
 	}
 	sim.AddNode(bebAddress, beb)
 	sim.AddNodes(helloNodeAddresses, helloNodes)
-	sim.Duration = 5 * time.Second
 }
 
 func main() {
+	flag.Parse()
 	initBebSimulation()
 	sim.Run()
 }

@@ -44,15 +44,15 @@ type Node interface {
 // NodeState is a string that represents the state of a node.
 //
 // It can be either Stopped, Running or Sleeping.
-type NodeState int
+type NodeState string
 
 const (
 	// Running is the state of a node that is running.
-	Running NodeState = iota
+	Running NodeState = "Running"
 	// Sleeping is the state of a node that is sleeping.
-	Sleeping
+	Sleeping NodeState = "Sleeping"
 	// Stopped is the state of a node that is stopped.
-	Stopped
+	Stopped NodeState = "Stopped"
 )
 
 // AbstractNode is a base implementation of the Node interface.
