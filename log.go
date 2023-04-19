@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-// TODO: call log functions in correct places in simulation.go and node.go without user having to call them
-
 // Log is an interface that is used to log events in the network.
 //
 // Each time an event occurs in the network, the corresponding Log function is called.
@@ -57,12 +55,14 @@ func NewDebugLog(logPath string) *DebugLog {
 }
 
 // LogSimulationState is called when the simulation state changes.
-// TODO: implement
-func (l *DebugLog) LogSimulationState(sim *Simulation) {}
+func (l *DebugLog) LogSimulationState(sim *Simulation) {
+	l.log.Printf("SimulationState(%v)\n", sim.state)
+}
 
 // LogNodeState is called when the state of a node changes.
-// TODO: implement
-func (l *DebugLog) LogNodeState(node Node) {}
+func (l *DebugLog) LogNodeState(node Node) {
+	l.log.Printf("NodeState(%v, %v)\n", node.GetAddress(), node.GetState())
+}
 
 // LogSendMessage is called when a message is sent.
 func (l *DebugLog) LogSendMessage(from, to Address, message Message) {
@@ -128,63 +128,159 @@ func NewUmlLog(logPath string) *UmlLog {
 		return nil
 	}
 	umlLog := log.New(logfile, prefix, flag)
-	umlLog.Println("@startuml")
-	umlLog.Println("!theme reddress-lightred")
-	umlLog.Println("skinparam shadowing false")
-	umlLog.Println("skinparam sequenceArrowThickness 1")
-	umlLog.Println("skinparam responseMessageBelowArrow true")
-	umlLog.Println("skinparam sequenceMessageAlign right")
 	return &UmlLog{
 		log: umlLog,
 	}
 }
 
 // LogSimulationState is called when the simulation state changes.
-// TODO: implement
 func (l *UmlLog) LogSimulationState(sim *Simulation) {
-	// print when finished
-	l.log.Println("@enduml")
+	switch sim.state {
+	case SimulationNotStarted:
+		l.log.Println("@startuml")
+		l.log.Println("!theme reddress-lightred")
+		l.log.Println("skinparam shadowing false")
+		l.log.Println("skinparam sequenceArrowThickness 1")
+		l.log.Println("skinparam responseMessageBelowArrow true")
+		l.log.Println("skinparam sequenceMessageAlign right")
+	case SimulationRunning:
+		// do nothing
+	case SimulationFinished:
+		l.log.Println("@enduml")
+	}
 }
 
 // LogNodeState is called when the state of a node changes.
-// TODO: implement
 func (l *UmlLog) LogNodeState(node Node) {}
 
 // LogSendMessage is called when a message is sent.
-// TODO: implement
-func (l *UmlLog) LogSendMessage(from, to Address, message Message) {}
-
-// LogHandleMessage is called when a message is handled.
-func (l *UmlLog) LogHandleMessage(from, to Address, message Message) {
+func (l *UmlLog) LogSendMessage(from, to Address, message Message) {
 	l.log.Printf("%v -> %v : %v\n", from, to, message)
 }
 
+// LogHandleMessage is called when a message is handled.
+func (l *UmlLog) LogHandleMessage(from, to Address, message Message) {}
+
 // LogDropMessage is called when a message is dropped.
-// TODO: implement
 func (l *UmlLog) LogDropMessage(from, to Address, message Message) {}
 
 // LogSetTimer is called when a timer is set.
-// TODO: implement
-func (l *UmlLog) LogSetTimer(to Address, timer Timer, duration time.Duration) {}
-
-// LogHandleTimer is called when a timer is handled.
-func (l *UmlLog) LogHandleTimer(to Address, timer Timer, duration time.Duration) {
+func (l *UmlLog) LogSetTimer(to Address, timer Timer, duration time.Duration) {
 	l.log.Printf("%v -> %v : %v\n", to, to, timer)
 }
 
+// LogHandleTimer is called when a timer is handled.
+func (l *UmlLog) LogHandleTimer(to Address, timer Timer, duration time.Duration) {}
+
 // LogDropTimer is called when a timer is dropped.
-// TODO: implement
 func (l *UmlLog) LogDropTimer(to Address, timer Timer, duration time.Duration) {}
 
 // LogSendInterrupt is called when an interrupt is sent.
-// TODO: implement
-func (l *UmlLog) LogSendInterrupt(from, to Address, interrupt Interrupt) {}
-
-// LogHandleInterrupt is called when an interrupt is handled.
-func (l *UmlLog) LogHandleInterrupt(from, to Address, interrupt Interrupt) {
+func (l *UmlLog) LogSendInterrupt(from, to Address, interrupt Interrupt) {
 	l.log.Printf("%v -> %v : %v\n", from, to, interrupt)
 }
 
+// LogHandleInterrupt is called when an interrupt is handled.
+func (l *UmlLog) LogHandleInterrupt(from, to Address, interrupt Interrupt) {}
+
 // LogDropInterrupt is called when an interrupt is dropped.
-// TODO: implement
 func (l *UmlLog) LogDropInterrupt(from, to Address, interrupt Interrupt) {}
+
+// LogSimulationState is called when the simulation state changes.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogSimulationState() {
+	for _, log := range s.loggers {
+		log.LogSimulationState(s)
+	}
+}
+
+// LogNodeState is called when the state of a node changes.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogNodeState(node Node) {
+	for _, log := range s.loggers {
+		log.LogNodeState(node)
+	}
+}
+
+// LogSendMessage is called when a message is sent.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogSendMessage(from, to Address, message Message) {
+	for _, log := range s.loggers {
+		log.LogSendMessage(from, to, message)
+	}
+}
+
+// LogHandleMessage is called when a message is handled.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogHandleMessage(from, to Address, message Message) {
+	for _, log := range s.loggers {
+		log.LogHandleMessage(from, to, message)
+	}
+}
+
+// LogDropMessage is called when a message is dropped.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogDropMessage(from, to Address, message Message) {
+	for _, log := range s.loggers {
+		log.LogDropMessage(from, to, message)
+	}
+}
+
+// LogSetTimer is called when a timer is set.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogSetTimer(to Address, timer Timer, duration time.Duration) {
+	for _, log := range s.loggers {
+		log.LogSetTimer(to, timer, duration)
+	}
+}
+
+// LogHandleTimer is called when a timer is handled.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogHandleTimer(to Address, timer Timer, duration time.Duration) {
+	for _, log := range s.loggers {
+		log.LogHandleTimer(to, timer, duration)
+	}
+}
+
+// LogDropTimer is called when a timer is dropped.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogDropTimer(to Address, timer Timer, duration time.Duration) {
+	for _, log := range s.loggers {
+		log.LogDropTimer(to, timer, duration)
+	}
+}
+
+// LogSendInterrupt is called when an interrupt is sent.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogSendInterrupt(from, to Address, interrupt Interrupt) {
+	for _, log := range s.loggers {
+		log.LogSendInterrupt(from, to, interrupt)
+	}
+}
+
+// LogHandleInterrupt is called when an interrupt is handled.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogHandleInterrupt(from, to Address, interrupt Interrupt) {
+	for _, log := range s.loggers {
+		log.LogHandleInterrupt(from, to, interrupt)
+	}
+}
+
+// LogDropInterrupt is called when an interrupt is dropped.
+//
+// This method is called for all logs in the simulation.
+func (s *Simulation) LogDropInterrupt(from, to Address, interrupt Interrupt) {
+	for _, log := range s.loggers {
+		log.LogDropInterrupt(from, to, interrupt)
+	}
+}

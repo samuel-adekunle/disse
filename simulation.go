@@ -60,8 +60,7 @@ type Simulation struct {
 	nodes        map[Address]Node
 	messageQueue chan MessageTriplet
 	timerQueue   chan TimerTriplet
-	debugLog     Log
-	umlLog       Log
+	loggers      []Log
 	state        SimulationState
 }
 
@@ -94,15 +93,12 @@ func NewSimulation(options *SimulationOptions) *Simulation {
 		nodes:        make(map[Address]Node),
 		messageQueue: make(chan MessageTriplet, options.MessageBufferSize),
 		timerQueue:   make(chan TimerTriplet, options.TimerBufferSize),
-		debugLog:     NewDebugLog(options.DebugLogPath),
-		umlLog:       NewUmlLog(options.UmlLogPath),
-		state:        SimulationNotStarted,
+		loggers: []Log{
+			NewDebugLog(options.DebugLogPath),
+			NewUmlLog(options.UmlLogPath),
+		},
+		state: SimulationNotStarted,
 	}
-}
-
-// randomLatency returns a random duration between the minimum and maximum latency.
-func (s *Simulation) randomLatency() time.Duration {
-	return s.options.MinLatency + time.Duration(rand.Int63n(int64(s.options.MaxLatency-s.options.MinLatency)))
 }
 
 // AddNode adds a node to the simulation.
@@ -123,29 +119,53 @@ func (s *Simulation) AddNodes(addresses []Address, nodes []Node) (err error) {
 	return nil
 }
 
+// handleMessages handles a message once the appropriate node is found.
+//
+// If the node is not running, the message is dropped.
+//
+// If the message is successfully handled, true is returned, otherwise false.
+func (s *Simulation) handleMessage(ctx context.Context, node Node, mt MessageTriplet) bool {
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleMessage(mt.From, mt.To, mt.Message)
+	return node.HandleMessage(ctx, mt.Message, mt.From)
+}
+
 // HandleMessage handles a message by sending it to the appropriate node.
+//
+// If the root node does not exist, the message is dropped.
 //
 // If the node is not running, the message is dropped.
 //
 // If the address does not match the root node, the sub nodes are checked recursively for a match.
 //
 // If the message is successfully handled, true is returned, otherwise false.
-func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) (handled bool) {
-	if node, ok := s.nodes[mt.To]; ok {
-		if node.GetState() != Running {
-			return false
-		}
-		s.debugLog.LogHandleMessage(mt.From, mt.To, mt.Message)
-		return node.HandleMessage(ctx, mt.Message, mt.From)
+func (s *Simulation) HandleMessage(ctx context.Context, mt MessageTriplet) bool {
+	if _, ok := s.nodes[mt.To.Root()]; !ok {
+		return false
 	}
-	return s.nodes[mt.To.Root()].SubNodesHandleMessage(ctx, mt)
+	return s.nodes[mt.To.Root()].FindMessageHandler(ctx, mt)
 }
 
 // DropMessage drops a message.
 //
 // This means the message is not handled by any node.
 func (s *Simulation) DropMessage(ctx context.Context, mt MessageTriplet) {
-	s.debugLog.LogDropMessage(mt.From, mt.To, mt.Message)
+	s.LogDropMessage(mt.From, mt.To, mt.Message)
+}
+
+// handleTimer handles a timer once the appropriate node is found.
+//
+// If the node is not running, the timer is dropped.
+//
+// If the timer is successfully handled, true is returned, otherwise false.
+func (s *Simulation) handleTimer(ctx context.Context, node Node, tt TimerTriplet) bool {
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
+	return node.HandleTimer(ctx, tt.Timer, tt.Duration)
 }
 
 // HandleTimer handles a timer by sending it to the appropriate node.
@@ -155,22 +175,31 @@ func (s *Simulation) DropMessage(ctx context.Context, mt MessageTriplet) {
 // If the address does not match the root node, the sub nodes are checked recursively for a match.
 //
 // If the timer is successfully handled, true is returned, otherwise false.
-func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) (handled bool) {
-	if node, ok := s.nodes[tt.To]; ok {
-		if node.GetState() != Running {
-			return false
-		}
-		s.debugLog.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
-		return node.HandleTimer(ctx, tt.Timer, tt.Duration)
+func (s *Simulation) HandleTimer(ctx context.Context, tt TimerTriplet) bool {
+	if _, ok := s.nodes[tt.To.Root()]; !ok {
+		return false
 	}
-	return s.nodes[tt.To.Root()].SubNodesHandleTimer(ctx, tt)
+	return s.nodes[tt.To.Root()].FindTimerHandler(ctx, tt)
 }
 
 // DropTimer drops a timer.
 //
 // This means the timer is not handled by any node.
 func (s *Simulation) DropTimer(ctx context.Context, tt TimerTriplet) {
-	s.debugLog.LogDropTimer(tt.To, tt.Timer, tt.Duration)
+	s.LogDropTimer(tt.To, tt.Timer, tt.Duration)
+}
+
+// handleInterrupt handles an interrupt once the appropriate node is found.
+//
+// If the node is not running, the interrupt is dropped.
+//
+// If the interrupt is successfully handled, true is returned, otherwise false.
+func (s *Simulation) handleInterrupt(ctx context.Context, node Node, it InterruptTriplet) bool {
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
+	return node.HandleInterrupt(ctx, it.Interrupt, it.From)
 }
 
 // HandleInterrupt handles an interrupt by sending it to the appropriate node.
@@ -180,40 +209,48 @@ func (s *Simulation) DropTimer(ctx context.Context, tt TimerTriplet) {
 // If the address does not match the root node, the sub nodes are checked recursively for a match.
 //
 // If an unknown interrupt is received, the interrupt is dropped and the function returns false, otherwise true.
-func (s *Simulation) HandleInterrupt(ctx context.Context, ip InterruptTriplet) bool {
-	if node, ok := s.nodes[ip.To]; ok {
-		if node.GetState() == Stopped {
-			return false
-		}
-		s.debugLog.LogHandleInterrupt(ip.From, ip.To, ip.Interrupt)
-		return node.HandleInterrupt(ctx, ip.Interrupt)
+func (s *Simulation) HandleInterrupt(ctx context.Context, it InterruptTriplet) bool {
+	if _, ok := s.nodes[it.To.Root()]; !ok {
+		return false
 	}
-	return s.nodes[ip.To.Root()].SubNodesHandleInterrupt(ctx, ip)
+	return s.nodes[it.To.Root()].FindInterruptHandler(ctx, it)
 }
 
 // DropInterrupt drops an interrupt.
 //
 // This means the interrupt is not handled by any node.
-func (s *Simulation) DropInterrupt(ctx context.Context, ip InterruptTriplet) {
-	s.debugLog.LogDropInterrupt(ip.From, ip.To, ip.Interrupt)
+func (s *Simulation) DropInterrupt(ctx context.Context, it InterruptTriplet) {
+	s.LogDropInterrupt(it.From, it.To, it.Interrupt)
+}
+
+// randomLatency returns a random duration between the minimum and maximum latency.
+func (s *Simulation) randomLatency() time.Duration {
+	return s.options.MinLatency + time.Duration(rand.Int63n(int64(s.options.MaxLatency-s.options.MinLatency)))
+}
+
+// initNode initializes a node and all it's sub nodes.
+func (s *Simulation) initNode(ctx context.Context, node Node) {
+	node.Init(ctx)
+	s.LogNodeState(node)
+	node.InitAll(ctx)
 }
 
 // startSim starts the simulation by initializing all nodes and sub nodes.
 func (s *Simulation) startSim(ctx context.Context) {
-	s.debugLog.LogSimulationState(s)
+	s.LogSimulationState()
 	for _, node := range s.nodes {
-		s.debugLog.LogNodeState(node)
-		node.Init(ctx)
-		node.SubNodesInit(ctx)
+		s.initNode(ctx, node)
 	}
+	s.state = SimulationRunning
+	s.LogSimulationState()
 }
 
 // stopSim stops the simulation by closing the message and timer queues and waiting for all nodes to stop doing work.
 func (s *Simulation) stopSim() {
-	s.debugLog.LogSimulationState(s)
 	close(s.messageQueue)
 	close(s.timerQueue)
-	s.generateUmlImage()
+	s.state = SimulationFinished
+	s.LogSimulationState()
 }
 
 // Run runs the simulation.
@@ -221,6 +258,7 @@ func (s *Simulation) stopSim() {
 // The simulation run by polling the message and timer queues and sending the messages and timers to the appropriate nodes.
 func (s *Simulation) Run() {
 	godotenv.Load()
+
 	var ctx context.Context
 	if s.options.Duration == Infinity {
 		ctx = context.Background()
@@ -238,7 +276,7 @@ func (s *Simulation) Run() {
 			if s.options.Duration != Infinity {
 				s.stopSim()
 				wg.Wait()
-				s.debugLog.LogSimulationState(s)
+				s.generateUmlImage()
 				return
 			}
 		case mt := <-s.messageQueue:
