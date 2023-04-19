@@ -46,8 +46,9 @@ type SleepInterruptData struct {
 	Duration time.Duration
 }
 
-// InterruptPair is a pair of an interrupt and the address of the node to which it should be sent.
-type InterruptPair struct {
+// InterruptTriplet is a triplet of an interrupt, the address of the node that sent the interrupt and the address of the node that received the interrupt.
+type InterruptTriplet struct {
 	Interrupt Interrupt
+	From      Address
 	To        Address
 }

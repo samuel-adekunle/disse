@@ -20,7 +20,7 @@ type Node interface {
 	SubNodesInit(context.Context)
 	SubNodesHandleMessage(context.Context, MessageTriplet) (handled bool)
 	SubNodesHandleTimer(context.Context, TimerTriplet) (handled bool)
-	SubNodesHandleInterrupt(context.Context, InterruptPair) (handled bool)
+	SubNodesHandleInterrupt(context.Context, InterruptTriplet) (handled bool)
 	HandleInterrupt(context.Context, Interrupt) (handled bool)
 	SendMessage(context.Context, Message, Address)
 	BroadcastMessage(context.Context, Message, []Address)
@@ -92,7 +92,7 @@ func (n *AbstractNode) SubNodesInit(ctx context.Context) {
 	for address, node := range n.subNodes {
 		wg.Add(1)
 		go func(_address Address, _node Node) {
-			debugLog.Printf("Init(%v)\n", _address)
+			n.sim.debugLog.LogNodeState(_node)
 			_node.Init(ctx)
 			_node.SubNodesInit(ctx)
 			wg.Done()
@@ -115,7 +115,7 @@ func (n *AbstractNode) SubNodesHandleMessage(ctx context.Context, mt MessageTrip
 		if node.GetState() != Running {
 			return false
 		}
-		debugLog.Printf("HandleMessage(%v -> %v, %v)\n", mt.From, mt.To, mt.Message)
+		n.sim.debugLog.LogHandleMessage(mt.From, mt.To, mt.Message)
 		return node.HandleMessage(ctx, mt.Message, mt.From)
 	}
 	var wg sync.WaitGroup
@@ -144,7 +144,7 @@ func (n *AbstractNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet)
 		if node.GetState() != Running {
 			return false
 		}
-		debugLog.Printf("HandleTimer(-> %v, %v, %v)\n", tt.To, tt.Timer, tt.Duration)
+		n.sim.debugLog.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
 		return node.HandleTimer(ctx, tt.Timer, tt.Duration)
 	}
 	var wg sync.WaitGroup
@@ -168,12 +168,12 @@ func (n *AbstractNode) SubNodesHandleTimer(ctx context.Context, tt TimerTriplet)
 // If no match is found or the matching node is not running, the interrupt is dropped.
 //
 // If an unknown interrupt is received, the interrupt is dropped and the function returns false, otherwise true.
-func (n *AbstractNode) SubNodesHandleInterrupt(ctx context.Context, ip InterruptPair) (handled bool) {
+func (n *AbstractNode) SubNodesHandleInterrupt(ctx context.Context, ip InterruptTriplet) (handled bool) {
 	if node, ok := n.subNodes[ip.To]; ok {
 		if node.GetState() == Stopped {
 			return false
 		}
-		debugLog.Printf("HandleInterrupt(-> %v, %v)\n", n.address, ip.Interrupt)
+		n.sim.debugLog.LogHandleInterrupt(ip.From, ip.To, ip.Interrupt)
 		return node.HandleInterrupt(ctx, ip.Interrupt)
 	}
 	var wg sync.WaitGroup
@@ -229,11 +229,10 @@ func (n *AbstractNode) HandleInterrupt(ctx context.Context, interrupt Interrupt)
 func (n *AbstractNode) SendMessage(ctx context.Context, message Message, to Address) {
 	select {
 	case <-ctx.Done():
-		debugLog.Printf("StopSim.SendMessage(%v -> %v, %v)\n", n.address, to, message)
 		return
 	default:
-		umlLog.Printf("%v -> %v : %v\n", n.address, to, message.Type)
-		debugLog.Printf("SendMessage(%v -> %v, %v)\n", n.address, to, message)
+		n.sim.umlLog.LogSendMessage(n.address, to, message)
+		n.sim.debugLog.LogSendMessage(n.address, to, message)
 		mt := MessageTriplet{message, n.address, to}
 		if to.Root() == n.address.Root() {
 			if handled := n.sim.HandleMessage(ctx, mt); !handled {
@@ -251,10 +250,8 @@ func (n *AbstractNode) SendMessage(ctx context.Context, message Message, to Addr
 func (n *AbstractNode) BroadcastMessage(ctx context.Context, message Message, to []Address) {
 	select {
 	case <-ctx.Done():
-		debugLog.Printf("StopSim.BroadcastMessage(%v -> %v, %v)\n", n.address, to, message)
 		return
 	default:
-		debugLog.Printf("BroadcastMessage(%v -> %v, %v)\n", n.address, to, message)
 		for _, address := range to {
 			n.SendMessage(ctx, message, address)
 		}
@@ -269,11 +266,10 @@ func (n *AbstractNode) BroadcastMessage(ctx context.Context, message Message, to
 func (n *AbstractNode) SetTimer(ctx context.Context, timer Timer, duration time.Duration) {
 	select {
 	case <-ctx.Done():
-		debugLog.Printf("StopSim.SetTimer(-> %v, %v, %v)\n", n.address, timer, duration)
 		return
 	default:
-		umlLog.Printf("%v -> %v : %v\n", n.address, n.address, timer.Type)
-		debugLog.Printf("SetTimer(-> %v, %v, %v)\n", n.address, timer, duration)
+		n.sim.umlLog.LogSetTimer(n.address, timer, duration)
+		n.sim.debugLog.LogSetTimer(n.address, timer, duration)
 		n.sim.timerQueue <- TimerTriplet{timer, n.address, duration}
 	}
 }
@@ -289,12 +285,11 @@ func (n *AbstractNode) SetTimer(ctx context.Context, timer Timer, duration time.
 func (n *AbstractNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to Address) {
 	select {
 	case <-ctx.Done():
-		debugLog.Printf("StopSim.SendInterrupt(%v -> %v, %v)\n", n.address, to, interrupt)
 		return
 	default:
-		umlLog.Printf("%v -> %v : %v\n", n.address, to, interrupt.Type)
-		debugLog.Printf("SendInterrupt(%v -> %v, %v)\n", n.address, to, interrupt)
-		ip := InterruptPair{interrupt, to}
+		n.sim.umlLog.LogSendInterrupt(n.address, to, interrupt)
+		n.sim.debugLog.LogSendInterrupt(n.address, to, interrupt)
+		ip := InterruptTriplet{interrupt, n.address, to}
 		if handled := n.sim.HandleInterrupt(ctx, ip); !handled {
 			n.sim.DropInterrupt(ctx, ip)
 		}
