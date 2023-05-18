@@ -1,11 +1,4 @@
-// Package pl implements perfect point-to-point links.
-//
-// Note that this package does not need to be used as the internal `SendMessage` method
-// is equivalent to a perfect point-to-point link.
-//
-// This package is provided as an example of how to implement a module using the DISSE library
-// given a specification and is not intended to be used in production.
-package pl
+package lib
 
 import (
 	"context"
@@ -33,6 +26,12 @@ type PlDeliverData struct {
 }
 
 // PlNode is a node that implements perfect point-to-point links.
+//
+// Note that this node does not need to be used as the internal `SendMessage` method
+// is equivalent to a perfect point-to-point link.
+//
+// This node is provided as an example of how to implement a module using the DISSE library
+// given a specification and is not intended to be used in production.
 type PlNode struct {
 	*ds.AbstractNode
 	deliveredMessages map[ds.MessageId]bool

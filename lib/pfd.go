@@ -1,8 +1,4 @@
-// Package pfd implements a perfect failure detector.
-//
-// A perfect failure detector assumes a crash-stop process abstraction
-// and uses timeouts to detect process failures.
-package pfd
+package lib
 
 import (
 	"context"
@@ -30,6 +26,8 @@ type PfdCrashData struct {
 }
 
 // PfdNode is a node that implements a perfect failure detector.
+//
+// It assumes a crash-stop process abstraction and uses timeouts to detect process failures.
 type PfdNode struct {
 	*ds.AbstractNode
 	nodes   []ds.Address

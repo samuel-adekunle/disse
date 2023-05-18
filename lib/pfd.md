@@ -5,8 +5,8 @@
  - Instance: _pfd_
 
 ## Messages
- - `_pfd_ -> p: PfdCrash(_q_)`: Indicates that a process _q_ has crashed.
+ - `_pfd_ -> _p_: PfdCrash(_q_)`: Indicates that a process _q_ has crashed.
 
 ## Properties
  - **Strong completeness**: Eventually, every process that crashes is permanently detected by every correct process.
- - **Strong accuracy**: If a process p is detected by any process, then p has crashed.
+ - **Strong accuracy**: If a process _p_ is detected by any process, then _p_ has crashed.
