@@ -11,6 +11,6 @@
 
 ## Properties
 
- - PL1: Reliable delivery: If a correct process _p_ sends a message _m_ to a correct process _q_, then _q_ eventually delivers _m_.
- - PL2: No duplication: No message is delivered by a process more than once.
- - PL3: No creation: If some process _q_ delivers a message _m_ with sender _p_, then _m_ was previously sent to _q_ by process _p_.
+ - **Reliable delivery**: If a correct process _p_ sends a message _m_ to a correct process _q_, then _q_ eventually delivers _m_.
+ - **No duplication**: No message is delivered by a process more than once.
+ - **No creation**: If some process _q_ delivers a message _m_ with sender _p_, then _m_ was previously sent to _q_ by process _p_.

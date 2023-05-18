@@ -23,13 +23,13 @@ const (
 
 // PlSendData is the data of a send message.
 type PlSendData struct {
-	destination ds.Address
-	message     ds.Message
+	Destination ds.Address
+	Message     ds.Message
 }
 
 // PlDeliverData is the data of a deliver message.
 type PlDeliverData struct {
-	message ds.Message
+	Message ds.Message
 }
 
 // PlNode is a node that implements perfect point-to-point links.
@@ -46,13 +46,11 @@ func (n *PlNode) Init(ctx context.Context) {
 // HandleMessage is called when the node receives a message.
 //
 // If the message is a send message, the message is sent to the destination.
-//
-// All other messages are dropped.
 func (n *PlNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
 	case PlSend:
 		data := message.Data.(PlSendData)
-		n.SendMessage(ctx, data.message, data.destination)
+		n.SendMessage(ctx, data.Message, data.Destination)
 		// HACK(samuel-adekunle): assume that the message is always delivered
 		n.deliveredMessages[message.Id] = true
 		deliverMessage := ds.NewMessage(PlDeliver, PlDeliverData{message})
@@ -64,8 +62,6 @@ func (n *PlNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 }
 
 // HandleTimer is called when the node receives a timer.
-//
-// All timers are dropped.
 func (n *PlNode) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) bool {
 	switch timer.Type {
 	default:
