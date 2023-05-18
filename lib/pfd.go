@@ -47,10 +47,6 @@ func (n *PfdNode) Init(ctx context.Context) {
 }
 
 // HandleMessage is called when the node receives a message.
-//
-// If the message is a heartbeat request, the node sends a heartbeat reply to the sender.
-//
-// If the message is a heartbeat reply, mark the sender as alive.
 func (n *PfdNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
 	case PfdHeartbeatRequest:
@@ -66,8 +62,6 @@ func (n *PfdNode) HandleMessage(ctx context.Context, message ds.Message, from ds
 }
 
 // HandleTimer is called when the node receives a timer.
-//
-// If the timer is a PfdTimeout timer, the node sends a heartbeat request to all nodes.
 func (n *PfdNode) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) bool {
 	switch timer.Type {
 	case PfdTimeout:

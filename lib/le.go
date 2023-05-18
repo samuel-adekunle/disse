@@ -45,6 +45,7 @@ func (n *LeNode) Init(ctx context.Context) {
 // HandleMessage is called when the node receives a message.
 //
 // If the message is a crash message, the node is marked as crashed.
+//
 // If the current leader is crashed, a new leader is elected.
 func (n *LeNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
@@ -58,7 +59,7 @@ func (n *LeNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 					break
 				}
 			}
-			// HACK(samuel-adekunle): Assume that a new leader is always elected.
+			// XXX(samuel-adekunle): Assume that a new leader is always elected.
 			leaderMessage := ds.NewMessage(LeLeader, LeLeaderData{Node: n.leader})
 			for _, node := range n.nodes {
 				if !n.crashed[node] {
@@ -73,7 +74,7 @@ func (n *LeNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 }
 
 // HandleTimer is called when the node receives a timer.
-func HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) bool {
+func (n *LeNode) HandleTimer(ctx context.Context, timer ds.Timer, length time.Duration) bool {
 	switch timer.Type {
 	default:
 		return false

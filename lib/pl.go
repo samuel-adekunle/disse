@@ -43,14 +43,12 @@ func (n *PlNode) Init(ctx context.Context) {
 }
 
 // HandleMessage is called when the node receives a message.
-//
-// If the message is a send message, the message is sent to the destination.
 func (n *PlNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
 	case PlSend:
 		data := message.Data.(PlSendData)
 		n.SendMessage(ctx, data.Message, data.Destination)
-		// HACK(samuel-adekunle): assume that the message is always delivered
+		// XXX(samuel-adekunle): assume that the message is always delivered
 		n.deliveredMessages[message.Id] = true
 		deliverMessage := ds.NewMessage(PlDeliver, PlDeliverData{message})
 		n.SendMessage(ctx, deliverMessage, from)
