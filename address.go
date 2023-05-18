@@ -7,6 +7,8 @@ import "strings"
 // Nodes can be composed of subnodes and subnodes addresses are concatenated with a dot ('.').
 //
 // For example 'A.B' is an addresses pointing to node B which is a subnode of node A.
+//
+// Subnodes can be used to reuse handlers and encapsulate logic.
 type Address string
 
 // Root returns the address of the root node.
