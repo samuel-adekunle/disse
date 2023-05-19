@@ -8,21 +8,21 @@ import (
 	ds "github.com/samuel-adekunle/disse"
 )
 
-// HelloNode is a node that sends a hello to an echo node after 1 second.
-type HelloNode struct {
-	*ds.AbstractNode
-	echoNode ds.Address
-}
-
 const (
 	// HelloTimer is the type of timer used to send a hello to an echo node after 1 second.
-	HelloTimer ds.TimerType = "HelloT"
+	HelloTimer ds.TimerType = "HelloTimer"
 	// EchoSend is the type of message used to send a hello.
 	Hello ds.MessageType = "Hello"
 )
 
 // HelloData is the data of a hello message.
 type HelloData string
+
+// HelloNode is a node that sends a hello to an echo node after 1 second.
+type HelloNode struct {
+	*ds.AbstractNode
+	echoNode ds.Address
+}
 
 // Init is called when the node is initialized by the simulation.
 func (n *HelloNode) Init(ctx context.Context) {

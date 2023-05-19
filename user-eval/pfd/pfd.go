@@ -38,6 +38,7 @@ type PfdNode struct {
 // Init is called when the node is initialized by the simulation.
 func (n *PfdNode) Init(ctx context.Context) {
 	n.alive = make(map[ds.Address]bool)
+	n.crashed = make(map[ds.Address]bool)
 	for _, node := range n.nodes {
 		n.alive[node] = true
 		n.crashed[node] = false
