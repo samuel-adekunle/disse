@@ -28,8 +28,6 @@ type LeLeaderData struct {
 // upper bound on message delay.
 type LeNode struct {
 	*ds.AbstractNode
-	// External perfect failure detector
-	Pfd     *PfdNode
 	nodes   []ds.Address
 	leader  ds.Address
 	crashed map[ds.Address]bool
