@@ -4,12 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"os"
 	"os/exec"
 	"sync"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 // SimulationState is the state of the simulation.
@@ -41,6 +38,8 @@ type SimulationOptions struct {
 	TimerBufferSize   int
 	DebugLogPath      string
 	UmlLogPath        string
+	JavaPath          string
+	PlantumlPath      string
 }
 
 const (
@@ -50,8 +49,10 @@ const (
 	DefaultMinLatency        = 10 * time.Millisecond
 	DefaultMaxLatency        = 100 * time.Millisecond
 	DefaultDuration          = Infinity
-	DefaultDebugLogPath      = ""
-	DefaultUmlLogPath        = ""
+	DefaultDebugLogPath      = "debug.log"
+	DefaultUmlLogPath        = "uml.log"
+	DefaultJavaPath          = ""
+	DefaultPlantumlPath      = ""
 )
 
 // Simulation sets up and runs the distributed system simulation.
@@ -332,23 +333,21 @@ const (
 
 // generateUmlImage generates a UML image of the simulation using PlantUML (requires java).
 func (s *Simulation) generateUmlImage() {
-	godotenv.Load()
-	javaPath := os.Getenv(JavaEnv)
-	plantumlPath := os.Getenv(PlantumlEnv)
-
+	javaPath := s.options.JavaPath
+	plantumlPath := s.options.PlantumlPath
 	if javaPath == "" || plantumlPath == "" {
-		fmt.Printf("javaPath (%v) or plantumlPath (%v) not set. UML image not generated.\n", javaPath, plantumlPath)
+		fmt.Println("javaPath or plantumlPath not set. UML image not generated.")
 		return
 	}
 
 	if s.options.UmlLogPath == "" {
-		fmt.Printf("umlLogPath (%v) set to ''. UML image not generated.\n", s.options.UmlLogPath)
+		fmt.Println("umlLogPath not set. UML image not generated.")
 		return
 	}
 
 	cmd := exec.Command(javaPath, "-jar", plantumlPath, s.options.UmlLogPath)
 	err := cmd.Run()
 	if err != nil {
-		fmt.Printf("Error %v when generating UML image. Check if javaPath (%v) and plantumlPath (%v) are correctly set.\n", err, javaPath, plantumlPath)
+		fmt.Printf("Error %v when generating UML image. Check if javaPath, plantumlPath and umlLogPath.\n", err)
 	}
 }

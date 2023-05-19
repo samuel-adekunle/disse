@@ -42,7 +42,7 @@ func (n *BebNode) HandleMessage(ctx context.Context, message ds.Message, from ds
 	case BebBroadcast:
 		data := message.Data.(BebBroadcastData)
 		n.BroadcastMessage(ctx, data.Message, n.nodes)
-		deliverMessage := ds.NewMessage(BebDeliver, message.Data.(BebDeliverData))
+		deliverMessage := ds.NewMessage(BebDeliver, BebDeliverData(data))
 		n.SendMessage(ctx, deliverMessage, from)
 		return true
 	default:
