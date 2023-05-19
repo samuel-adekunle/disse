@@ -10,8 +10,6 @@ import (
 const (
 	// PfdTimeout is the type of timer used to detect process failures.
 	PfdTimeout ds.TimerType = "PfdTimeout"
-	// PfdTimeoutDuration is the duration of the PfdTimeout timer.
-	PfdTimeoutDuration = 100 * time.Millisecond
 	// PfdCrash is the type of message used to indicate that a node has crashed.
 	PfdCrash ds.MessageType = "PfdCrash"
 	// PfdHeartbeatRequest is the type of message used to request a heartbeat.
@@ -25,14 +23,16 @@ type PfdCrashData struct {
 	Node ds.Address
 }
 
-// PfdNode is a node that implements a perfect failure detector.
+// PfdNode is a node that implements a perfect failure detector which assumes a crash-stop
+// process abstraction and a synchronous system with a known upper bound on message delay.
 //
-// It assumes a crash-stop process abstraction and uses timeouts to detect process failures.
+// This implementation uses the "Exclude on Timeout" algorithm.
 type PfdNode struct {
 	*ds.AbstractNode
-	nodes   []ds.Address
-	alive   map[ds.Address]bool
-	crashed map[ds.Address]bool
+	nodes           []ds.Address
+	alive           map[ds.Address]bool
+	crashed         map[ds.Address]bool
+	timeoutDuration time.Duration
 }
 
 // Init is called when the node is initialized by the simulation.
@@ -43,7 +43,7 @@ func (n *PfdNode) Init(ctx context.Context) {
 		n.crashed[node] = false
 	}
 	timeoutTimer := ds.NewTimer(PfdTimeout, nil)
-	n.SetTimer(ctx, timeoutTimer, PfdTimeoutDuration)
+	n.SetTimer(ctx, timeoutTimer, n.timeoutDuration)
 }
 
 // HandleMessage is called when the node receives a message.
@@ -84,7 +84,7 @@ func (n *PfdNode) HandleTimer(ctx context.Context, timer ds.Timer, length time.D
 			n.alive[node] = false
 		}
 		timeoutTimer := ds.NewTimer(PfdTimeout, nil)
-		n.SetTimer(ctx, timeoutTimer, PfdTimeoutDuration)
+		n.SetTimer(ctx, timeoutTimer, n.timeoutDuration)
 		return true
 	default:
 		return false

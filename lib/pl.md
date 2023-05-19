@@ -18,3 +18,6 @@
 ## Implementation
 
  - View the implementation [here](./pl.go).
+
+## Note
+This module is not intended to be used when implementing other modules because the disse library has built in a `SendMessage` function that implements point-to-point communication between processes. This module is only included for completeness.
