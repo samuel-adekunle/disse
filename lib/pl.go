@@ -27,11 +27,7 @@ type PlDeliverData struct {
 
 // PlNode is a node that implements perfect point-to-point links.
 //
-// Note that this node does not need to be used as the internal `SendMessage` method
-// is equivalent to a perfect point-to-point link.
-//
-// This node is provided as an example of how to implement a module using the DISSE library
-// given a specification and is not intended to be used in production.
+// This implementation uses the "Eliminate Duplicates" algorithm.
 type PlNode struct {
 	*ds.AbstractNode
 	deliveredMessages map[ds.MessageId]bool
@@ -47,10 +43,14 @@ func (n *PlNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 	switch message.Type {
 	case PlSend:
 		data := message.Data.(PlSendData)
+		if _, ok := n.deliveredMessages[message.Id]; ok {
+			return true
+		}
 		n.SendMessage(ctx, data.Message, data.Destination)
-		// XXX(samuel-adekunle): assume that the message is always delivered
 		n.deliveredMessages[message.Id] = true
-		deliverMessage := ds.NewMessage(PlDeliver, PlDeliverData{message})
+		deliverMessage := ds.NewMessage(PlDeliver, PlDeliverData{
+			Message: data.Message,
+		})
 		n.SendMessage(ctx, deliverMessage, from)
 		return true
 	default:

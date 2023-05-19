@@ -19,11 +19,13 @@ type LeLeaderData struct {
 
 // LeNode is a node that implements leader election.
 //
-// It assumes a crash-stop process abstraction and isn't useful for crash-recovery
-// or Byzantine process abstractions.
+// It elects a new leader when the current leader crashes
+// using the "Monarchical Leader Election" algorithm where node
+// index is used as the rank.
 //
-// It elects a new leader when the current leader crashes and uses a perfect failure detector
-// to detect crashes.
+// It uses a perfect failure detector to detect crashes which assumes
+// a crash-stop process abstraction and a synchronous system with a known
+// upper bound on message delay.
 type LeNode struct {
 	*ds.AbstractNode
 	// External perfect failure detector
@@ -43,30 +45,28 @@ func (n *LeNode) Init(ctx context.Context) {
 }
 
 // HandleMessage is called when the node receives a message.
-//
-// If the message is a crash message, the node is marked as crashed.
-//
-// If the current leader is crashed, a new leader is elected.
 func (n *LeNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
 	case PfdCrash:
 		data := message.Data.(PfdCrashData)
 		n.crashed[data.Node] = true
-		if n.leader == data.Node {
-			for _, node := range n.nodes {
-				if !n.crashed[node] {
-					n.leader = node
-					break
-				}
-			}
-			// XXX(samuel-adekunle): Assume that a new leader is always elected.
-			leaderMessage := ds.NewMessage(LeLeader, LeLeaderData{Node: n.leader})
-			for _, node := range n.nodes {
-				if !n.crashed[node] {
-					n.SendMessage(ctx, leaderMessage, node)
-				}
+		if n.leader != data.Node {
+			return true
+		}
+
+		aliveNodes := []ds.Address{}
+		for _, node := range n.nodes {
+			if !n.crashed[node] {
+				aliveNodes = append(aliveNodes, node)
 			}
 		}
+
+		if len(aliveNodes) == 0 {
+			return true
+		}
+		n.leader = aliveNodes[0]
+		leaderMessage := ds.NewMessage(LeLeader, LeLeaderData{Node: n.leader})
+		n.BroadcastMessage(ctx, leaderMessage, aliveNodes)
 		return true
 	default:
 		return false
