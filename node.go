@@ -222,7 +222,7 @@ func (n *AbstractNode) SendMessage(ctx context.Context, message Message, to Addr
 				n.sim.DropMessage(ctx, mt)
 			}
 		} else {
-			n.sim.messageQueue <- mt
+			n.sim.nodeMessageQueue[mt.To] <- mt
 		}
 	}
 }
@@ -252,7 +252,7 @@ func (n *AbstractNode) SetTimer(ctx context.Context, timer Timer, duration time.
 		return
 	default:
 		n.sim.LogSetTimer(n.address, timer, duration)
-		n.sim.timerQueue <- TimerTriplet{timer, n.address, duration}
+		n.sim.nodeTimerQueue[n.address] <- TimerTriplet{timer, n.address, duration}
 	}
 }
 
