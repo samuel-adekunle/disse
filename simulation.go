@@ -322,13 +322,6 @@ func (s *Simulation) Run() {
 	s.generateUmlImage()
 }
 
-const (
-	// JavaEnv is the environment variable name for the java executable.
-	JavaEnv = "DISSE_JAVA"
-	// PlantumlEnv is the environment variable name for the plantuml jar file.
-	PlantumlEnv = "DISSE_PLANTUML"
-)
-
 // generateUmlImage generates a UML image of the simulation using PlantUML (requires java).
 func (s *Simulation) generateUmlImage() {
 	javaPath := s.options.JavaPath
