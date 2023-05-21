@@ -43,12 +43,11 @@ type SimulationOptions struct {
 }
 
 const (
-	Infinity                 = time.Duration(0)
 	DefaultMessageBufferSize = 100
 	DefaultTimerBufferSize   = 100
 	DefaultMinLatency        = 10 * time.Millisecond
 	DefaultMaxLatency        = 100 * time.Millisecond
-	DefaultDuration          = Infinity
+	DefaultDuration          = 10 * time.Second
 	DefaultDebugLogPath      = "debug.log"
 	DefaultUmlLogPath        = "uml.log"
 	DefaultJavaPath          = ""
@@ -57,12 +56,13 @@ const (
 
 // Simulation sets up and runs the distributed system simulation.
 type Simulation struct {
-	options      *SimulationOptions
-	nodes        map[Address]Node
-	messageQueue chan MessageTriplet
-	timerQueue   chan TimerTriplet
-	loggers      []Log
-	state        SimulationState
+	options          *SimulationOptions
+	wg               *sync.WaitGroup
+	nodes            map[Address]Node
+	nodeMessageQueue map[Address]chan MessageTriplet
+	nodeTimerQueue   map[Address]chan TimerTriplet
+	loggers          []Log
+	state            SimulationState
 }
 
 // NewSimulation creates a new simulation with the given options.
@@ -90,10 +90,11 @@ func NewSimulation(options *SimulationOptions) *Simulation {
 		}
 	}
 	return &Simulation{
-		options:      options,
-		nodes:        make(map[Address]Node),
-		messageQueue: make(chan MessageTriplet, options.MessageBufferSize),
-		timerQueue:   make(chan TimerTriplet, options.TimerBufferSize),
+		options:          options,
+		wg:               &sync.WaitGroup{},
+		nodes:            make(map[Address]Node),
+		nodeMessageQueue: make(map[Address]chan MessageTriplet),
+		nodeTimerQueue:   make(map[Address]chan TimerTriplet),
 		loggers: []Log{
 			NewDebugLog(options.DebugLogPath),
 			NewUmlLog(options.UmlLogPath),
@@ -105,6 +106,8 @@ func NewSimulation(options *SimulationOptions) *Simulation {
 // AddNode adds a node to the simulation.
 func (s *Simulation) AddNode(address Address, node Node) {
 	s.nodes[address] = node
+	s.nodeMessageQueue[address] = make(chan MessageTriplet, s.options.MessageBufferSize)
+	s.nodeTimerQueue[address] = make(chan TimerTriplet, s.options.TimerBufferSize)
 }
 
 // AddNodes adds multiple nodes to the simulation.
@@ -123,6 +126,8 @@ func (s *Simulation) AddNodes(addresses []Address, nodes []Node) (err error) {
 // RemoveNode removes a node from the simulation.
 func (s *Simulation) RemoveNode(address Address) {
 	delete(s.nodes, address)
+	delete(s.nodeMessageQueue, address)
+	delete(s.nodeTimerQueue, address)
 }
 
 // handleMessages handles a message once the appropriate node is found.
@@ -265,6 +270,26 @@ func (s *Simulation) startSim(ctx context.Context) {
 	s.LogSimulationState()
 	for _, node := range s.nodes {
 		s.initNode(ctx, node)
+		s.wg.Add(1)
+		go func(_node Address) {
+			for {
+				select {
+				case <-ctx.Done():
+					s.wg.Done()
+					return
+				case mt := <-s.nodeMessageQueue[_node]:
+					time.Sleep(s.randomLatency())
+					if handled := s.HandleMessage(ctx, mt); !handled {
+						s.DropMessage(ctx, mt)
+					}
+				case tt := <-s.nodeTimerQueue[_node]:
+					time.Sleep(s.randomLatency())
+					if handled := s.HandleTimer(ctx, tt); !handled {
+						s.DropTimer(ctx, tt)
+					}
+				}
+			}
+		}(node.GetAddress())
 	}
 	s.state = SimulationRunning
 	s.LogSimulationState()
@@ -272,8 +297,7 @@ func (s *Simulation) startSim(ctx context.Context) {
 
 // stopSim stops the simulation by closing the message and timer queues and waiting for all nodes to stop doing work.
 func (s *Simulation) stopSim() {
-	close(s.messageQueue)
-	close(s.timerQueue)
+	s.wg.Wait()
 	s.state = SimulationFinished
 	s.LogSimulationState()
 }
@@ -282,46 +306,13 @@ func (s *Simulation) stopSim() {
 //
 // The simulation run by polling the message and timer queues and sending the messages and timers to the appropriate nodes.
 func (s *Simulation) Run() {
-	var ctx context.Context
-	if s.options.Duration == Infinity {
-		ctx = context.Background()
-	} else {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(context.Background(), s.options.Duration)
-		defer cancel()
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), s.options.Duration)
+	defer cancel()
 
-	var wg sync.WaitGroup
 	s.startSim(ctx)
-	for {
-		select {
-		case <-ctx.Done():
-			if s.options.Duration != Infinity {
-				s.stopSim()
-				wg.Wait()
-				s.generateUmlImage()
-				return
-			}
-		case mt := <-s.messageQueue:
-			wg.Add(1)
-			go func() {
-				time.Sleep(s.randomLatency())
-				if handled := s.HandleMessage(ctx, mt); !handled {
-					s.DropMessage(ctx, mt)
-				}
-				wg.Done()
-			}()
-		case tt := <-s.timerQueue:
-			wg.Add(1)
-			go func() {
-				time.Sleep(tt.Duration)
-				if handled := s.HandleTimer(ctx, tt); !handled {
-					s.DropTimer(ctx, tt)
-				}
-				wg.Done()
-			}()
-		}
-	}
+	<-ctx.Done()
+	s.stopSim()
+	s.generateUmlImage()
 }
 
 const (
