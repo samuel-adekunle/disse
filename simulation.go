@@ -32,15 +32,14 @@ const (
 //   - JavaPath is the path to the java executable.
 //   - PlantumlPath is the path to the plantuml jar file.
 type SimulationOptions struct {
-	MinLatency      time.Duration
-	MaxLatency      time.Duration
-	Duration        time.Duration
-	BufferSize      int
-	TimerBufferSize int
-	DebugLogPath    string
-	UmlLogPath      string
-	JavaPath        string
-	PlantumlPath    string
+	MinLatency   time.Duration
+	MaxLatency   time.Duration
+	Duration     time.Duration
+	BufferSize   int
+	DebugLogPath string
+	UmlLogPath   string
+	JavaPath     string
+	PlantumlPath string
 }
 
 const (
