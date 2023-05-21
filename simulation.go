@@ -132,6 +132,7 @@ func (s *Simulation) RemoveNode(address Address) {
 	delete(s.nodes, address)
 	delete(s.messageQueue, address)
 	delete(s.timerQueue, address)
+	delete(s.interruptQueue, address)
 }
 
 // handleMessages handles a message once the appropriate node is found.
