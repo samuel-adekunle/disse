@@ -29,7 +29,7 @@ type PfdCrashData struct {
 // This implementation uses the "Exclude on Timeout" algorithm.
 type PfdNode struct {
 	*ds.AbstractNode
-	nodes           []ds.Address
+	Nodes           []ds.Address
 	alive           map[ds.Address]bool
 	crashed         map[ds.Address]bool
 	timeoutDuration time.Duration
@@ -39,7 +39,7 @@ type PfdNode struct {
 func (n *PfdNode) Init(ctx context.Context) {
 	n.alive = make(map[ds.Address]bool)
 	n.crashed = make(map[ds.Address]bool)
-	for _, node := range n.nodes {
+	for _, node := range n.Nodes {
 		n.alive[node] = true
 		n.crashed[node] = false
 	}
@@ -67,12 +67,12 @@ func (n *PfdNode) HandleTimer(ctx context.Context, timer ds.Timer, length time.D
 	switch timer.Type {
 	case PfdTimeout:
 		aliveNodes := []ds.Address{}
-		for _, node := range n.nodes {
+		for _, node := range n.Nodes {
 			if n.alive[node] {
 				aliveNodes = append(aliveNodes, node)
 			}
 		}
-		for _, node := range n.nodes {
+		for _, node := range n.Nodes {
 			if !n.alive[node] && !n.crashed[node] {
 				crashMessage := ds.NewMessage(PfdCrash, PfdCrashData{node})
 				n.crashed[node] = true
@@ -81,7 +81,7 @@ func (n *PfdNode) HandleTimer(ctx context.Context, timer ds.Timer, length time.D
 		}
 		heartbeatRequestMessage := ds.NewMessage(PfdHeartbeatRequest, nil)
 		n.BroadcastMessage(ctx, heartbeatRequestMessage, aliveNodes)
-		for _, node := range n.nodes {
+		for _, node := range n.Nodes {
 			n.alive[node] = false
 		}
 		timeoutTimer := ds.NewTimer(PfdTimeout, nil)

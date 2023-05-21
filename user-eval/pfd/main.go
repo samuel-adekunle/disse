@@ -89,7 +89,7 @@ func main() {
 	nodes = append(nodes, pfdAddress)
 	pfdNode := &PfdNode{
 		AbstractNode:    ds.NewAbstractNode(sim, pfdAddress),
-		nodes:           nodes,
+		Nodes:           nodes,
 		timeoutDuration: 10 * opts.MaxLatency,
 	}
 	sim.AddNode(pfdAddress, pfdNode)

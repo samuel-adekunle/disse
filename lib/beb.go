@@ -30,7 +30,7 @@ type BebDeliverData struct {
 // assumption on failure detection and message reliability.
 type BebNode struct {
 	*ds.AbstractNode
-	nodes []ds.Address
+	Nodes []ds.Address
 }
 
 // Init is called when the node is initialized by the simulation.
@@ -41,7 +41,7 @@ func (n *BebNode) HandleMessage(ctx context.Context, message ds.Message, from ds
 	switch message.Type {
 	case BebBroadcast:
 		data := message.Data.(BebBroadcastData)
-		n.BroadcastMessage(ctx, data.Message, n.nodes)
+		n.BroadcastMessage(ctx, data.Message, n.Nodes)
 		deliverMessage := ds.NewMessage(BebDeliver, BebDeliverData(data))
 		n.SendMessage(ctx, deliverMessage, from)
 		return true

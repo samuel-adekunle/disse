@@ -28,18 +28,20 @@ type LeLeaderData struct {
 // upper bound on message delay.
 type LeNode struct {
 	*ds.AbstractNode
-	nodes   []ds.Address
+	Nodes   []ds.Address
 	leader  ds.Address
 	crashed map[ds.Address]bool
 }
 
 // Init is called when the node is initialized by the simulation.
 func (n *LeNode) Init(ctx context.Context) {
-	n.leader = n.nodes[0]
 	n.crashed = make(map[ds.Address]bool)
-	for _, node := range n.nodes {
+	for _, node := range n.Nodes {
 		n.crashed[node] = false
 	}
+	n.leader = n.Nodes[0]
+	leaderMessage := ds.NewMessage(LeLeader, LeLeaderData{Node: n.leader})
+	n.BroadcastMessage(ctx, leaderMessage, n.Nodes)
 }
 
 // HandleMessage is called when the node receives a message.
@@ -53,7 +55,7 @@ func (n *LeNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 		}
 
 		aliveNodes := []ds.Address{}
-		for _, node := range n.nodes {
+		for _, node := range n.Nodes {
 			if !n.crashed[node] {
 				aliveNodes = append(aliveNodes, node)
 			}
@@ -65,6 +67,10 @@ func (n *LeNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 		n.leader = aliveNodes[0]
 		leaderMessage := ds.NewMessage(LeLeader, LeLeaderData{Node: n.leader})
 		n.BroadcastMessage(ctx, leaderMessage, aliveNodes)
+		return true
+	case PfdHeartbeatRequest:
+		heartbeatReply := ds.NewMessage(PfdHeartbeatReply, nil)
+		n.SendMessage(ctx, heartbeatReply, from)
 		return true
 	default:
 		return false
