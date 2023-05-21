@@ -26,43 +26,43 @@ const (
 //   - MinLatency is the minimum latency of the network.
 //   - MaxLatency is the maximum latency of the network.
 //   - Duration is the duration of the simulation. If it is set to Infinity, the simulation will run forever.
-//   - MessageBufferSize is the size of the message queue.
-//   - TimerBufferSize is the size of the timer queue.
+//   - BufferSize is the size of the message buffers for each node.
 //   - DebugLogPath is the path to the debug log file.
 //   - UmlLogPath is the path to the UML log file.
+//   - JavaPath is the path to the java executable.
+//   - PlantumlPath is the path to the plantuml jar file.
 type SimulationOptions struct {
-	MinLatency        time.Duration
-	MaxLatency        time.Duration
-	Duration          time.Duration
-	MessageBufferSize int
-	TimerBufferSize   int
-	DebugLogPath      string
-	UmlLogPath        string
-	JavaPath          string
-	PlantumlPath      string
+	MinLatency   time.Duration
+	MaxLatency   time.Duration
+	Duration     time.Duration
+	BufferSize   int
+	DebugLogPath string
+	UmlLogPath   string
+	JavaPath     string
+	PlantumlPath string
 }
 
 const (
-	DefaultMessageBufferSize = 100
-	DefaultTimerBufferSize   = 100
-	DefaultMinLatency        = 10 * time.Millisecond
-	DefaultMaxLatency        = 100 * time.Millisecond
-	DefaultDuration          = 10 * time.Second
-	DefaultDebugLogPath      = "debug.log"
-	DefaultUmlLogPath        = "uml.log"
-	DefaultJavaPath          = ""
-	DefaultPlantumlPath      = ""
+	DefaultBufferSize   = 20
+	DefaultMinLatency   = 10 * time.Millisecond
+	DefaultMaxLatency   = 100 * time.Millisecond
+	DefaultDuration     = 10 * time.Second
+	DefaultDebugLogPath = "debug.log"
+	DefaultUmlLogPath   = "uml.log"
+	DefaultJavaPath     = ""
+	DefaultPlantumlPath = ""
 )
 
 // Simulation sets up and runs the distributed system simulation.
 type Simulation struct {
-	options          *SimulationOptions
-	wg               *sync.WaitGroup
-	nodes            map[Address]Node
-	nodeMessageQueue map[Address]chan MessageTriplet
-	nodeTimerQueue   map[Address]chan TimerTriplet
-	loggers          []Log
-	state            SimulationState
+	options        *SimulationOptions
+	wg             *sync.WaitGroup
+	nodes          map[Address]Node
+	messageQueue   map[Address]chan MessageTriplet
+	timerQueue     map[Address]chan TimerTriplet
+	interruptQueue map[Address]chan InterruptTriplet
+	loggers        []Log
+	state          SimulationState
 }
 
 // NewSimulation creates a new simulation with the given options.
@@ -73,28 +73,31 @@ type Simulation struct {
 //   - MinLatency: 10ms
 //   - MaxLatency: 100ms
 //   - Duration: Infinity (runs forever)
-//   - MessageBufferSize: 100
-//   - TimerBufferSize: 100
+//   - BufferSize: 100
 //   - DebugLogPath: "" (no debug log)
 //   - UmlLogPath: "" (no UML log)
+//   - JavaPath: "" (no java path)
+//   - PlantumlPath: "" (no plantuml path)
 func NewSimulation(options *SimulationOptions) *Simulation {
 	if options == nil {
 		options = &SimulationOptions{
-			MinLatency:        DefaultMinLatency,
-			MaxLatency:        DefaultMaxLatency,
-			Duration:          DefaultDuration,
-			MessageBufferSize: DefaultMessageBufferSize,
-			TimerBufferSize:   DefaultTimerBufferSize,
-			DebugLogPath:      DefaultDebugLogPath,
-			UmlLogPath:        DefaultUmlLogPath,
+			MinLatency:   DefaultMinLatency,
+			MaxLatency:   DefaultMaxLatency,
+			Duration:     DefaultDuration,
+			BufferSize:   DefaultBufferSize,
+			DebugLogPath: DefaultDebugLogPath,
+			UmlLogPath:   DefaultUmlLogPath,
+			JavaPath:     DefaultJavaPath,
+			PlantumlPath: DefaultPlantumlPath,
 		}
 	}
 	return &Simulation{
-		options:          options,
-		wg:               &sync.WaitGroup{},
-		nodes:            make(map[Address]Node),
-		nodeMessageQueue: make(map[Address]chan MessageTriplet),
-		nodeTimerQueue:   make(map[Address]chan TimerTriplet),
+		options:        options,
+		wg:             &sync.WaitGroup{},
+		nodes:          make(map[Address]Node),
+		messageQueue:   make(map[Address]chan MessageTriplet),
+		timerQueue:     make(map[Address]chan TimerTriplet),
+		interruptQueue: make(map[Address]chan InterruptTriplet),
 		loggers: []Log{
 			NewDebugLog(options.DebugLogPath),
 			NewUmlLog(options.UmlLogPath),
@@ -106,8 +109,9 @@ func NewSimulation(options *SimulationOptions) *Simulation {
 // AddNode adds a node to the simulation.
 func (s *Simulation) AddNode(address Address, node Node) {
 	s.nodes[address] = node
-	s.nodeMessageQueue[address] = make(chan MessageTriplet, s.options.MessageBufferSize)
-	s.nodeTimerQueue[address] = make(chan TimerTriplet, s.options.TimerBufferSize)
+	s.messageQueue[address] = make(chan MessageTriplet, s.options.BufferSize)
+	s.timerQueue[address] = make(chan TimerTriplet, s.options.BufferSize)
+	s.interruptQueue[address] = make(chan InterruptTriplet, s.options.BufferSize)
 }
 
 // AddNodes adds multiple nodes to the simulation.
@@ -126,8 +130,8 @@ func (s *Simulation) AddNodes(addresses []Address, nodes []Node) (err error) {
 // RemoveNode removes a node from the simulation.
 func (s *Simulation) RemoveNode(address Address) {
 	delete(s.nodes, address)
-	delete(s.nodeMessageQueue, address)
-	delete(s.nodeTimerQueue, address)
+	delete(s.messageQueue, address)
+	delete(s.timerQueue, address)
 }
 
 // handleMessages handles a message once the appropriate node is found.
@@ -277,15 +281,17 @@ func (s *Simulation) startSim(ctx context.Context) {
 				case <-ctx.Done():
 					s.wg.Done()
 					return
-				case mt := <-s.nodeMessageQueue[_node]:
-					time.Sleep(s.randomLatency())
+				case mt := <-s.messageQueue[_node]:
 					if handled := s.HandleMessage(ctx, mt); !handled {
 						s.DropMessage(ctx, mt)
 					}
-				case tt := <-s.nodeTimerQueue[_node]:
-					time.Sleep(s.randomLatency())
+				case tt := <-s.timerQueue[_node]:
 					if handled := s.HandleTimer(ctx, tt); !handled {
 						s.DropTimer(ctx, tt)
+					}
+				case it := <-s.interruptQueue[_node]:
+					if handled := s.HandleInterrupt(ctx, it); !handled {
+						s.DropInterrupt(ctx, it)
 					}
 				}
 			}

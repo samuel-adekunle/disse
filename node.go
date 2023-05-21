@@ -217,13 +217,12 @@ func (n *AbstractNode) SendMessage(ctx context.Context, message Message, to Addr
 	default:
 		n.sim.LogSendMessage(n.address, to, message)
 		mt := MessageTriplet{message, n.address, to}
-		if to.Root() == n.address.Root() {
-			if handled := n.sim.HandleMessage(ctx, mt); !handled {
-				n.sim.DropMessage(ctx, mt)
+		go func() {
+			if to.Root() != n.address.Root() {
+				time.Sleep(n.sim.randomLatency())
 			}
-		} else {
-			n.sim.nodeMessageQueue[mt.To] <- mt
-		}
+			n.sim.messageQueue[mt.To] <- mt
+		}()
 	}
 }
 
@@ -252,7 +251,10 @@ func (n *AbstractNode) SetTimer(ctx context.Context, timer Timer, duration time.
 		return
 	default:
 		n.sim.LogSetTimer(n.address, timer, duration)
-		n.sim.nodeTimerQueue[n.address] <- TimerTriplet{timer, n.address, duration}
+		go func() {
+			time.Sleep(duration)
+			n.sim.timerQueue[n.address] <- TimerTriplet{timer, n.address, duration}
+		}()
 	}
 }
 
@@ -272,9 +274,9 @@ func (n *AbstractNode) SendInterrupt(ctx context.Context, interrupt Interrupt, t
 	default:
 		n.sim.LogSendInterrupt(n.address, to, interrupt)
 		it := InterruptTriplet{interrupt, n.address, to}
-		if handled := n.sim.HandleInterrupt(ctx, it); !handled {
-			n.sim.DropInterrupt(ctx, it)
-		}
+		go func() {
+			n.sim.interruptQueue[it.To] <- it
+		}()
 	}
 }
 
