@@ -57,7 +57,7 @@ func main() {
 	// opts contains the configuration options for the simulation.
 	// Either all fields are set or pass nil to use the default values.
 	opts := &ds.SimulationOptions{
-		Duration:          5 * time.Second,
+		Duration:          8 * time.Second,
 		MinLatency:        10 * time.Millisecond,
 		MaxLatency:        100 * time.Millisecond,
 		MessageBufferSize: 100,
@@ -73,14 +73,14 @@ func main() {
 	// nodes is a list of all nodes in the simulation.
 	nodes := []ds.Address{}
 
-	// Create 3 faulty nodes that stop after 2, 5, and 8 seconds respectively
+	// Create 3 faulty nodes that stop after 2, 4, and 6 seconds respectively
 	// and add them to the simulation.
 	for i := 1; i <= 3; i++ {
 		faultyAddress := ds.Address(fmt.Sprintf("faulty%d", i))
 		nodes = append(nodes, faultyAddress)
 		faultyNode := &FaultyNode{
 			AbstractNode:   ds.NewAbstractNode(sim, faultyAddress),
-			interruptDelay: time.Duration(2+3*(i-1)) * time.Second,
+			interruptDelay: time.Duration(i*2) * time.Second,
 		}
 		sim.AddNode(faultyAddress, faultyNode)
 	}
@@ -91,7 +91,7 @@ func main() {
 	pfdNode := &PfdNode{
 		AbstractNode:    ds.NewAbstractNode(sim, pfdAddress),
 		nodes:           nodes,
-		timeoutDuration: 5 * opts.MaxLatency,
+		timeoutDuration: 10 * opts.MaxLatency,
 	}
 	sim.AddNode(pfdAddress, pfdNode)
 
