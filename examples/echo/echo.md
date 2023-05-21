@@ -10,3 +10,7 @@
 
 ## Properties
  - **Echo**: If a correct process _p_ sends a message _m_ to the echo server, then _p_ eventually delivers _m_ back from the echo server.
+
+## Implementation
+ - View the implementation [here](./echo.go).
+ - View the simulation [here](./main.go).

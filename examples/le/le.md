@@ -10,3 +10,7 @@
 ## Properties
  - **Eventual detection**:  Either there is no correct process, or some correct process is eventually elected as the leader.
  - **Accuracy**:  If a process is leader, then all previously elected leaders have crashed.
+
+## Implementation
+ - View the implementation [here](./le.go).
+ - View the simulation [here](./main.go).
