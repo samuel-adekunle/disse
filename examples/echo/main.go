@@ -77,12 +77,8 @@ func main() {
 	// sim is the simulation created with the given options.
 	sim := ds.NewSimulation(opts)
 
-	// Create an echo node and add it to the simulation.
+	// TODO: Create an echo node and add it to the simulation.
 	echoAddress := ds.Address("echo")
-	echoNode := &EchoNode{
-		AbstractNode: ds.NewAbstractNode(sim, echoAddress),
-	}
-	sim.AddNode(echoAddress, echoNode)
 
 	// Create a hello node and add it to the simulation.
 	helloAddress := ds.Address("hello")

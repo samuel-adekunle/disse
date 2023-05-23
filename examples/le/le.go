@@ -36,19 +36,15 @@ type LeNode struct {
 
 // Init is called when the node is initialized by the simulation.
 func (n *LeNode) Init(ctx context.Context) {
-	n.crashed = make(map[ds.Address]bool)
-	for _, node := range n.Nodes {
-		n.crashed[node] = false
-	}
-	n.leader = n.Nodes[0]
-	leaderMessage := ds.NewMessage(LeLeader, LeLeaderData{Node: n.leader})
-	n.BroadcastMessage(ctx, leaderMessage, n.Nodes)
+	// TODO: initialize crashed map
+	// TODO: set leader to node with lowest index
+	// TODO: broadcast leader message
 }
 
 // HandleMessage is called when the node receives a message.
 func (n *LeNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
-	case lib.PfdCrash:
+	case // TODO: handle PfdCrash message from library:
 		data := message.Data.(lib.PfdCrashData)
 		n.crashed[data.Node] = true
 		if n.leader != data.Node {
@@ -64,9 +60,8 @@ func (n *LeNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 		if len(aliveNodes) == 0 {
 			return true
 		}
-		n.leader = aliveNodes[0]
-		leaderMessage := ds.NewMessage(LeLeader, LeLeaderData{Node: n.leader})
-		n.BroadcastMessage(ctx, leaderMessage, aliveNodes)
+		// TODO: set leader to node with lowest index
+		// TODO: broadcast leader message
 		return true
 	case lib.PfdHeartbeatRequest:
 		heartbeatReply := ds.NewMessage(lib.PfdHeartbeatReply, nil)

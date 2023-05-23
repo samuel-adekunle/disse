@@ -37,14 +37,8 @@ type PfdNode struct {
 
 // Init is called when the node is initialized by the simulation.
 func (n *PfdNode) Init(ctx context.Context) {
-	n.alive = make(map[ds.Address]bool)
-	n.crashed = make(map[ds.Address]bool)
-	for _, node := range n.Nodes {
-		n.alive[node] = true
-		n.crashed[node] = false
-	}
-	timeoutTimer := ds.NewTimer(PfdTimeout, nil)
-	n.SetTimer(ctx, timeoutTimer, n.timeoutDuration)
+	// TODO: initialize alive and crashed maps
+	// TODO: set timeout timer
 }
 
 // HandleMessage is called when the node receives a message.
@@ -72,13 +66,7 @@ func (n *PfdNode) HandleTimer(ctx context.Context, timer ds.Timer, length time.D
 				aliveNodes = append(aliveNodes, node)
 			}
 		}
-		for _, node := range n.Nodes {
-			if !n.alive[node] && !n.crashed[node] {
-				crashMessage := ds.NewMessage(PfdCrash, PfdCrashData{node})
-				n.crashed[node] = true
-				n.BroadcastMessage(ctx, crashMessage, aliveNodes)
-			}
-		}
+		// TODO: broadcast crash message for crashed nodes
 		heartbeatRequestMessage := ds.NewMessage(PfdHeartbeatRequest, nil)
 		n.BroadcastMessage(ctx, heartbeatRequestMessage, aliveNodes)
 		for _, node := range n.Nodes {

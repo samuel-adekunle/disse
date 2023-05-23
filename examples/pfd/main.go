@@ -84,15 +84,8 @@ func main() {
 		sim.AddNode(faultyAddress, faultyNode)
 	}
 
-	// Create a pfd node and add it to the simulation.
+	// TODO: Create a pfd node and add it to the simulation.
 	pfdAddress := ds.Address("pfd")
-	nodes = append(nodes, pfdAddress)
-	pfdNode := &PfdNode{
-		AbstractNode:    ds.NewAbstractNode(sim, pfdAddress),
-		Nodes:           nodes,
-		timeoutDuration: 10 * opts.MaxLatency,
-	}
-	sim.AddNode(pfdAddress, pfdNode)
 
 	// Run the simulation.
 	sim.Run()
