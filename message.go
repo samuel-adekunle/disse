@@ -15,7 +15,7 @@ type MessageId string
 type MessageType string
 
 // MessageData is the data associated with a message.
-type MessageData interface{}
+type MessageData any
 
 // Message is a message that is sent to a node.
 type Message struct {

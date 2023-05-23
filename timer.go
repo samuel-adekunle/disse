@@ -16,7 +16,7 @@ type TimerId string
 type TimerType string
 
 // TimerData is the data associated with a timer.
-type TimerData interface{}
+type TimerData any
 
 // Timer is a message that is sent to a node after a certain amount of time to trigger certain events.
 type Timer struct {

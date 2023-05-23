@@ -22,7 +22,7 @@ const (
 )
 
 // InterruptData is the data associated with an interrupt.
-type InterruptData interface{}
+type InterruptData any
 
 // Interrupt is a message that is sent to a node to interrupt its execution in some way.
 //
