@@ -4,5 +4,3 @@ This directory contains examples of how to use the library to create custom modu
 
 ## List of Examples
  1. [Echo](./echo/echo.md)
- 2. [Perfect Failure Detector](./pfd/pfd.md)
- 3. [Leader Election](./le/le.md)
