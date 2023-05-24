@@ -36,9 +36,9 @@ func (n *EchoNode) Init(ctx context.Context) {}
 func (n *EchoNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
 	case EchoSend:
-		// TODO: decode message data
-		// TODO: send received message back to sender
-		// TODO: send deliver message to sender
+		// TODO: 1. decode message data
+		// TODO: 2. send received message back to sender
+		// TODO: 3. send deliver message to sender
 		return true
 	}
 	return false
