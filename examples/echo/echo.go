@@ -38,7 +38,7 @@ func (n *EchoNode) HandleMessage(ctx context.Context, message ds.Message, from d
 	case EchoSend:
 		// TODO: 1. decode message data
 		// TODO: 2. send received message back to sender
-		// TODO: 3. send deliver message to sender
+		// TODO: 5. send deliver message to sender
 		return true
 	}
 	return false
