@@ -33,10 +33,6 @@ func (n *HelloNode) Init(ctx context.Context) {
 // HandleMessage is called when the node receives a message.
 func (n *HelloNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
-	case Hello:
-		data := message.Data.(HelloData)
-		fmt.Printf("%s received Hello: %s\n", n.GetAddress(), data)
-		return true
 	case EchoDeliver:
 		data := message.Data.(EchoDeliverData)
 		fmt.Printf("%s received EchoDeliver: %s\n", n.GetAddress(), data)
@@ -51,11 +47,9 @@ func (n *HelloNode) HandleTimer(ctx context.Context, timer ds.Timer, length time
 	switch timer.Type {
 	case HelloTimer:
 		echoSendMessage := ds.NewMessage(EchoSend, EchoSendData{
-			Message: ds.NewMessage(Hello, HelloData("Hey Sam")),
+			Message: ds.NewMessage(Hello, HelloData("Hey Jonah")),
 		})
 		n.SendMessage(ctx, echoSendMessage, n.receiver)
-		timer := ds.NewTimer(HelloTimer, nil)
-		n.SetTimer(ctx, timer, 1*time.Second)
 		return true
 	default:
 		return false
