@@ -54,7 +54,7 @@ func (n *HelloNode) HandleTimer(ctx context.Context, timer ds.Timer, length time
 			Message: ds.NewMessage(Hello, HelloData("Hello")),
 		})
 		n.SendMessage(ctx, echoSendMessage, n.echoNode)
-		n.setHelloTimer(ctx, 1*time.Second)
+		// TODO: set timer again
 		return true
 	default:
 		return false

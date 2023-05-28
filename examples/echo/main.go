@@ -26,10 +26,7 @@ func main() {
 
 	// Create an echo node and add it to the simulation.
 	echoAddress := ds.Address("echo")
-	echoNode := &EchoNode{
-		AbstractNode: ds.NewAbstractNode(sim, echoAddress),
-	}
-	sim.AddNode(echoAddress, echoNode)
+	// TODO: create echo node and add it to the simulation
 
 	// Create a 3 hello nodes and add them to the simulation.
 	for i := 0; i < 3; i++ {
