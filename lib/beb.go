@@ -21,6 +21,7 @@ type BebBroadcastData struct {
 
 // BebDeliverData is the data of a deliver message.
 type BebDeliverData struct {
+	Source  ds.Address
 	Message ds.Message
 }
 
@@ -41,9 +42,13 @@ func (n *BebNode) HandleMessage(ctx context.Context, message ds.Message, from ds
 	switch message.Type {
 	case BebBroadcast:
 		data := message.Data.(BebBroadcastData)
-		n.BroadcastMessage(ctx, data.Message, n.Nodes)
-		deliverMessage := ds.NewMessage(BebDeliver, BebDeliverData(data))
-		n.SendMessage(ctx, deliverMessage, from)
+		deliverMessage := ds.NewMessage(BebDeliver, BebDeliverData{
+			Source:  from,
+			Message: data.Message,
+		})
+		// XXX(samuel-adekunle): assumes that a message is always delivered.
+		// correct implementation uses perfect point-to-point links.
+		n.BroadcastMessage(ctx, deliverMessage, n.Nodes)
 		return true
 	default:
 		return false

@@ -22,6 +22,7 @@ type PlSendData struct {
 
 // PlDeliverData is the data of a deliver message.
 type PlDeliverData struct {
+	Source  ds.Address
 	Message ds.Message
 }
 
@@ -46,12 +47,14 @@ func (n *PlNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 		if _, ok := n.deliveredMessages[message.Id]; ok {
 			return true
 		}
-		n.SendMessage(ctx, data.Message, data.Destination)
-		n.deliveredMessages[message.Id] = true
 		deliverMessage := ds.NewMessage(PlDeliver, PlDeliverData{
+			Source:  from,
 			Message: data.Message,
 		})
 		n.SendMessage(ctx, deliverMessage, from)
+		// XXX(samuel-adekunle): assumes that a message is always delivered.
+		// correct implementations use stubborn links built on fairy lossy links.
+		n.deliveredMessages[message.Id] = true
 		return true
 	default:
 		return false

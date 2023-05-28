@@ -5,8 +5,8 @@
  - Instance: _le_
 
 ## Messages
- - `le -> q: LeLeader(p)`: Indicates that a process _p_ is elected as leader.
+ - `le -> b: LeLeader(a)`: Indicates that a node _a_ is elected as leader.
 
 ## Properties
- - **Eventual detection**:  Either there is no correct process, or some correct process is eventually elected as the leader.
- - **Accuracy**:  If a process is leader, then all previously elected leaders have crashed.
+ - **Eventual detection**:  Either there is no correct node, or some correct node is eventually elected as the leader.
+ - **Accuracy**:  If a node is leader, then all previously elected leaders have crashed.
