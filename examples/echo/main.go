@@ -14,7 +14,7 @@ func main() {
 		Duration:     5 * time.Second,
 		MinLatency:   10 * time.Millisecond,
 		MaxLatency:   100 * time.Millisecond,
-		BufferSize:   20,
+		BufferSize:   10,
 		DebugLogPath: "debug.log",
 		UmlLogPath:   "uml.log",
 		JavaPath:     "/usr/bin/java",
