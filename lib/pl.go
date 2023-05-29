@@ -30,7 +30,7 @@ type PlDeliverData struct {
 //
 // This implementation uses the "Eliminate Duplicates" algorithm.
 type PlNode struct {
-	*ds.AbstractNode
+	*ds.LocalNode
 	deliveredMessages map[ds.MessageId]bool
 }
 
@@ -52,8 +52,6 @@ func (n *PlNode) HandleMessage(ctx context.Context, message ds.Message, from ds.
 			Message: data.Message,
 		})
 		n.SendMessage(ctx, deliverMessage, from)
-		// XXX(samuel-adekunle): assumes that a message is always delivered.
-		// correct implementations use stubborn links built on fairy lossy links.
 		n.deliveredMessages[message.Id] = true
 		return true
 	default:

@@ -28,7 +28,7 @@ type PfdCrashData struct {
 //
 // This implementation uses the "Exclude on Timeout" algorithm.
 type PfdNode struct {
-	*ds.AbstractNode
+	*ds.LocalNode
 	Nodes           []ds.Address
 	alive           map[ds.Address]bool
 	crashed         map[ds.Address]bool

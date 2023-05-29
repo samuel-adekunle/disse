@@ -30,7 +30,7 @@ type BebDeliverData struct {
 // This implementation uses the "Basic Broadcast" algorithm and makes no
 // assumption on failure detection and message reliability.
 type BebNode struct {
-	*ds.AbstractNode
+	*ds.LocalNode
 	Nodes []ds.Address
 }
 
@@ -46,8 +46,6 @@ func (n *BebNode) HandleMessage(ctx context.Context, message ds.Message, from ds
 			Source:  from,
 			Message: data.Message,
 		})
-		// XXX(samuel-adekunle): assumes that a message is always delivered.
-		// correct implementation uses perfect point-to-point links.
 		n.BroadcastMessage(ctx, deliverMessage, n.Nodes)
 		return true
 	default:

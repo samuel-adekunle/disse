@@ -7,38 +7,24 @@ import (
 )
 
 // Node is the interface that must be implemented by all nodes in the distributed system.
-//
-// Most of the methods are implemented by AbstractNode and should not be overridden unless you know what you are doing.
-//
-// The Init, HandleMessage and HandleTimer methods should be implemented by concrete nodes to provide the desired behaviour.
 type Node interface {
-	// Implemented by AbstractNode:
+	Init(context.Context)
+	HandleMessage(context.Context, Message, Address) (handled bool)
+	HandleTimer(context.Context, Timer, time.Duration) (handled bool)
 	GetAddress() Address
 	GetState() NodeState
-	GetSimulation() *Simulation
-
-	GetSubNodes() map[Address]Node
-	GetSubNode(Address) Node
-	AddSubNode(Address, Node)
-	RemoveSubNode(Address)
-
-	InitAll(context.Context)
-	FindMessageHandler(context.Context, MessageTriplet) (handled bool)
-	FindTimerHandler(context.Context, TimerTriplet) (handled bool)
-	FindInterruptHandler(context.Context, InterruptTriplet) (handled bool)
-
 	SendMessage(context.Context, Message, Address)
 	BroadcastMessage(context.Context, Message, []Address)
 	SetTimer(context.Context, Timer, time.Duration)
 	SendInterrupt(context.Context, Interrupt, Address)
 
+	InitSubNodes(context.Context)
+	AddSubNode(Node)
+	RemoveSubNode(Address)
 	HandleInterrupt(context.Context, Interrupt, Address) (handled bool)
-
-	// To be implemented by concrete node:
-
-	Init(context.Context)
-	HandleMessage(context.Context, Message, Address) (handled bool)
-	HandleTimer(context.Context, Timer, time.Duration) (handled bool)
+	FindMessageHandler(context.Context, MessageTriplet) (handled bool)
+	FindTimerHandler(context.Context, TimerTriplet) (handled bool)
+	FindInterruptHandler(context.Context, InterruptTriplet) (handled bool)
 }
 
 // NodeState is a string that represents the state of a node.
@@ -55,25 +41,21 @@ const (
 	Stopped NodeState = "Stopped"
 )
 
-// AbstractNode is a base implementation of the Node interface.
+// LocalNode implements most of the functions needed to satisfy the INode interface.
 //
-// It provides the basic functionality for sending messages, setting timers and handling interrupts.
+// The only functions that need to be implemented by a LocalNode are Init, HandleMessage and HandleTimer.
 //
-// It also provides the functionality for handling sub nodes.
-//
-// It is recommended that all nodes extend this struct to avoid having to implement the same functionality multiple times.
-//
-// It is not recommended to override any of the methods in this struct unless you know what you are doing.
-type AbstractNode struct {
+// It is designed to be used with a LocalSimulation.
+type LocalNode struct {
 	address  Address
-	sim      *Simulation
+	sim      *LocalSimulation
 	subNodes map[Address]Node
 	state    NodeState
 }
 
-// NewAbstractNode creates a new AbstractNode.
-func NewAbstractNode(sim *Simulation, address Address) *AbstractNode {
-	return &AbstractNode{
+// NewLocalNode creates a new LocalNode with the given address.
+func NewLocalNode(sim *LocalSimulation, address Address) *LocalNode {
+	return &LocalNode{
 		address:  address,
 		sim:      sim,
 		subNodes: make(map[Address]Node),
@@ -82,42 +64,28 @@ func NewAbstractNode(sim *Simulation, address Address) *AbstractNode {
 }
 
 // GetAddress returns the address of the node.
-func (n *AbstractNode) GetAddress() Address {
+func (n *LocalNode) GetAddress() Address {
 	return n.address
 }
 
 // GetState returns the state of the node.
-func (n *AbstractNode) GetState() NodeState {
+func (n *LocalNode) GetState() NodeState {
 	return n.state
 }
 
-// GetSimulation returns the simulation that the node is part of.
-func (n *AbstractNode) GetSimulation() *Simulation {
-	return n.sim
-}
-
-// GetSubNodes returns a map of all sub nodes.
-func (n *AbstractNode) GetSubNodes() map[Address]Node {
-	return n.subNodes
-}
-
-// GetSubNode returns a sub node with the given address.
-func (n *AbstractNode) GetSubNode(address Address) Node {
-	return n.subNodes[address]
-}
-
 // AddSubNode adds a sub node to the node.
-func (n *AbstractNode) AddSubNode(address Address, node Node) {
+func (n *LocalNode) AddSubNode(node Node) {
+	address := node.GetAddress()
 	n.subNodes[address] = node
 }
 
 // RemoveSubNode removes a sub node with the given address.
-func (n *AbstractNode) RemoveSubNode(address Address) {
+func (n *LocalNode) RemoveSubNode(address Address) {
 	delete(n.subNodes, address)
 }
 
-// InitAll initializes all sub nodes of a node.
-func (n *AbstractNode) InitAll(ctx context.Context) {
+// InitSubNodes initializes all sub nodes of a node.
+func (n *LocalNode) InitSubNodes(ctx context.Context) {
 	var wg sync.WaitGroup
 	for _, node := range n.subNodes {
 		wg.Add(1)
@@ -137,9 +105,9 @@ func (n *AbstractNode) InitAll(ctx context.Context) {
 // If no match is found or the matching node is not running, the message is dropped.
 //
 // If a match is found, and the message is handled successfully, the method returns true, otherwise it returns false.
-func (n *AbstractNode) FindMessageHandler(ctx context.Context, mt MessageTriplet) (handled bool) {
+func (n *LocalNode) FindMessageHandler(ctx context.Context, mt MessageTriplet) (handled bool) {
 	if node, ok := n.subNodes[mt.To]; ok {
-		return n.sim.handleMessage(ctx, node, mt)
+		return n.sim._handleMessage(ctx, node, mt)
 	}
 	var wg sync.WaitGroup
 	for _, node := range n.subNodes {
@@ -162,9 +130,9 @@ func (n *AbstractNode) FindMessageHandler(ctx context.Context, mt MessageTriplet
 // If no match is found or the matching node is not running, the timer is dropped.
 //
 // If a match is found, and the timer is handled successfully, the method returns true, otherwise it returns false.
-func (n *AbstractNode) FindTimerHandler(ctx context.Context, tt TimerTriplet) (handled bool) {
+func (n *LocalNode) FindTimerHandler(ctx context.Context, tt TimerTriplet) (handled bool) {
 	if node, ok := n.subNodes[tt.To]; ok {
-		return n.sim.handleTimer(ctx, node, tt)
+		return n.sim._handleTimer(ctx, node, tt)
 	}
 	var wg sync.WaitGroup
 	for _, node := range n.subNodes {
@@ -187,9 +155,9 @@ func (n *AbstractNode) FindTimerHandler(ctx context.Context, tt TimerTriplet) (h
 // If no match is found or the matching node is not running, the interrupt is dropped.
 //
 // If an unknown interrupt is received, the interrupt is dropped and the function returns false, otherwise true.
-func (n *AbstractNode) FindInterruptHandler(ctx context.Context, it InterruptTriplet) (handled bool) {
+func (n *LocalNode) FindInterruptHandler(ctx context.Context, it InterruptTriplet) (handled bool) {
 	if node, ok := n.subNodes[it.To]; ok {
-		return n.sim.handleInterrupt(ctx, node, it)
+		return n.sim._handleInterrupt(ctx, node, it)
 	}
 	var wg sync.WaitGroup
 	for _, node := range n.subNodes {
@@ -210,7 +178,7 @@ func (n *AbstractNode) FindInterruptHandler(ctx context.Context, it InterruptTri
 // If the message is for a node outside the node's root node, the message is sent to the message queue which is handled by the simulation.
 //
 // The simulation will handle the message after introducing a random amount of latency.
-func (n *AbstractNode) SendMessage(ctx context.Context, message Message, to Address) {
+func (n *LocalNode) SendMessage(ctx context.Context, message Message, to Address) {
 	select {
 	case <-ctx.Done():
 		return
@@ -218,7 +186,7 @@ func (n *AbstractNode) SendMessage(ctx context.Context, message Message, to Addr
 		n.sim.LogSendMessage(n.address, to, message)
 		mt := MessageTriplet{message, n.address, to}
 		go func() {
-			if to.Root() != n.address.Root() {
+			if to.GetRoot() != n.address.GetRoot() {
 				time.Sleep(n.sim.randomLatency())
 			}
 			n.sim.messageQueue[mt.To] <- mt
@@ -229,7 +197,7 @@ func (n *AbstractNode) SendMessage(ctx context.Context, message Message, to Addr
 // BroadcastMessage sends a message to multiple nodes in the simulation.
 //
 // See SendMessage for more details on how the message is sent.
-func (n *AbstractNode) BroadcastMessage(ctx context.Context, message Message, to []Address) {
+func (n *LocalNode) BroadcastMessage(ctx context.Context, message Message, to []Address) {
 	select {
 	case <-ctx.Done():
 		return
@@ -245,7 +213,7 @@ func (n *AbstractNode) BroadcastMessage(ctx context.Context, message Message, to
 // The timer is sent to the timer queue which is handled by the simulation.
 //
 // The simulation will handle the timer after the specified duration and call the HandleTimer method.
-func (n *AbstractNode) SetTimer(ctx context.Context, timer Timer, duration time.Duration) {
+func (n *LocalNode) SetTimer(ctx context.Context, timer Timer, duration time.Duration) {
 	select {
 	case <-ctx.Done():
 		return
@@ -267,7 +235,7 @@ func (n *AbstractNode) SetTimer(ctx context.Context, timer Timer, duration time.
 // If the interrupt is not handled by the node or one of it's sub nodes, the interrupt is dropped.
 //
 // To delay the handling of an interrupt, use a Timer and call SendInterrupt from the HandleTimer method.
-func (n *AbstractNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to Address) {
+func (n *LocalNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to Address) {
 	select {
 	case <-ctx.Done():
 		return
@@ -289,7 +257,7 @@ func (n *AbstractNode) SendInterrupt(ctx context.Context, interrupt Interrupt, t
 // If the interrupt is a StartInterrupt, the node is resumed, usually after sleeping for a specified duration.
 //
 // If an unknown interrupt is received, the function returns false, otherwise true.
-func (n *AbstractNode) HandleInterrupt(ctx context.Context, interrupt Interrupt, from Address) bool {
+func (n *LocalNode) HandleInterrupt(ctx context.Context, interrupt Interrupt, from Address) bool {
 	switch interrupt.Type {
 	case StopInterrupt:
 		n.state = Stopped

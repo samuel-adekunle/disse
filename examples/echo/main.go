@@ -22,20 +22,23 @@ func main() {
 	}
 
 	// sim is the simulation created with the given options.
-	sim := ds.NewSimulation(opts)
+	sim := ds.NewLocalSimulation(opts)
 
 	// Create an echo node and add it to the simulation.
 	echoAddress := ds.Address("echo")
-	// TODO: create echo node and add it to the simulation
+	echoNode := &EchoNode{
+		LocalNode: ds.NewLocalNode(sim, echoAddress),
+	}
+	sim.AddNode(echoNode)
 
 	// Create a 3 hello nodes and add them to the simulation.
 	for i := 0; i < 3; i++ {
 		helloAddress := ds.Address(fmt.Sprintf("hello%d", i))
 		helloNode := &HelloNode{
-			AbstractNode: ds.NewAbstractNode(sim, helloAddress),
-			echoNode:     echoAddress,
+			LocalNode: ds.NewLocalNode(sim, helloAddress),
+			echoNode:  echoAddress,
 		}
-		sim.AddNode(helloAddress, helloNode)
+		sim.AddNode(helloNode)
 	}
 
 	// Run the simulation.

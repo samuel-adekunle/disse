@@ -20,7 +20,7 @@ type HelloData string
 
 // HelloNode is a node that sends a hello to an echo node after 1 second.
 type HelloNode struct {
-	*ds.AbstractNode
+	*ds.LocalNode
 	echoNode ds.Address
 }
 
@@ -54,7 +54,7 @@ func (n *HelloNode) HandleTimer(ctx context.Context, timer ds.Timer, length time
 			Message: ds.NewMessage(Hello, HelloData("Hello")),
 		})
 		n.SendMessage(ctx, echoSendMessage, n.echoNode)
-		// TODO: set timer again
+		n.setHelloTimer(ctx, 1*time.Second)
 		return true
 	default:
 		return false
