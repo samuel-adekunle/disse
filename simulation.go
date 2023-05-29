@@ -102,14 +102,10 @@ func NewLocalSimulation(options *LocalSimulationOptions) *LocalSimulation {
 		loggers:        make([]Logger, 0),
 		state:          SimulationNotStarted,
 	}
-	debugLogger, err := NewDebugLogger(options.DebugLogPath)
-	if err != nil {
-		sim.AddLogger(debugLogger)
-	}
-	umlLogger, err := NewUmlLogger(options.UmlLogPath)
-	if err != nil {
-		sim.AddLogger(umlLogger)
-	}
+	debugLogger, _ := NewDebugLogger(options.DebugLogPath)
+	sim.AddLogger(debugLogger)
+	umlLogger, _ := NewUmlLogger(options.UmlLogPath)
+	sim.AddLogger(umlLogger)
 	return sim
 }
 
