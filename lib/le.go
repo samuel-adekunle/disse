@@ -27,7 +27,7 @@ type LeLeaderData struct {
 // a crash-stop process abstraction and a synchronous system with a known
 // upper bound on message delay.
 type LeNode struct {
-	*ds.AbstractNode
+	*ds.LocalNode
 	Nodes   []ds.Address
 	leader  ds.Address
 	crashed map[ds.Address]bool

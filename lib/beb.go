@@ -30,7 +30,7 @@ type BebDeliverData struct {
 // This implementation uses the "Basic Broadcast" algorithm and makes no
 // assumption on failure detection and message reliability.
 type BebNode struct {
-	*ds.AbstractNode
+	*ds.LocalNode
 	Nodes []ds.Address
 }
 

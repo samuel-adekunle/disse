@@ -26,7 +26,7 @@ type EchoDeliverData struct {
 
 // EchoNode is a node that echoes messages.
 type EchoNode struct {
-	*ds.AbstractNode
+	*ds.LocalNode
 }
 
 // Init is called when the node is initialized by the simulation.
@@ -36,7 +36,10 @@ func (n *EchoNode) Init(ctx context.Context) {}
 func (n *EchoNode) HandleMessage(ctx context.Context, message ds.Message, from ds.Address) bool {
 	switch message.Type {
 	case EchoSend:
-		// TODO: implement echo message handling
+		echoDeliverMessage := ds.NewMessage(EchoDeliver, EchoDeliverData{
+			Message: message.Data.(EchoSendData).Message,
+		})
+		n.SendMessage(ctx, echoDeliverMessage, from)
 		return true
 	}
 	return false

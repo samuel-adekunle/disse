@@ -30,7 +30,7 @@ type PlDeliverData struct {
 //
 // This implementation uses the "Eliminate Duplicates" algorithm.
 type PlNode struct {
-	*ds.AbstractNode
+	*ds.LocalNode
 	deliveredMessages map[ds.MessageId]bool
 }
 
