@@ -1,7 +1,6 @@
 package disse
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -37,19 +36,18 @@ type DebugLogger struct {
 }
 
 // NewDebugLogger creates a new DebugLog that logs to the given file.
-func NewDebugLogger(logPath string) *DebugLogger {
+func NewDebugLogger(logPath string) (*DebugLogger, error) {
 	const (
 		prefix = ""
 		flag   = log.Ldate | log.Lmicroseconds
 	)
 	logfile, err := os.Create(logPath)
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		return nil
+		return nil, err
 	}
 	return &DebugLogger{
 		logger: log.New(logfile, prefix, flag),
-	}
+	}, nil
 }
 
 // LogSimulationState is called when the simulation state changes.
@@ -113,20 +111,19 @@ type UmlLogger struct {
 }
 
 // NewUmlLogger creates a new UmlLog that logs to the given file.
-func NewUmlLogger(logPath string) *UmlLogger {
+func NewUmlLogger(logPath string) (*UmlLogger, error) {
 	const (
 		prefix = ""
 		flag   = 0
 	)
 	logfile, err := os.Create(logPath)
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
-		return nil
+		return nil, err
 	}
 	umlLog := log.New(logfile, prefix, flag)
 	return &UmlLogger{
 		logger: umlLog,
-	}
+	}, nil
 }
 
 // LogSimulationState is called when the simulation state changes.
