@@ -46,8 +46,6 @@ func (n *BebNode) HandleMessage(ctx context.Context, message ds.Message, from ds
 			Source:  from,
 			Message: data.Message,
 		})
-		// XXX(samuel-adekunle): assumes that a message is always delivered.
-		// correct implementation uses perfect point-to-point links.
 		n.BroadcastMessage(ctx, deliverMessage, n.Nodes)
 		return true
 	default:
