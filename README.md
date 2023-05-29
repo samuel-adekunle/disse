@@ -11,3 +11,5 @@ Additionally, DISSE provides a variety of tools for analysing the results of sim
 View the API documentation [here](https://pkg.go.dev/github.com/samuel-adekunle/disse).
 
 View the standard library for modules which implement common distributed systems algorithms [here](./lib/README.md).
+
+For examples of how to use the library, see the [examples](./examples/README.md).
