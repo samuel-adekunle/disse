@@ -8,27 +8,23 @@ import (
 
 // Node is the interface that must be implemented by all nodes in the distributed system.
 type Node interface {
-	// To be implemented by the user
 	Init(context.Context)
 	HandleMessage(context.Context, Message, Address) (handled bool)
 	HandleTimer(context.Context, Timer, time.Duration) (handled bool)
-
-	// To be implemented by the simulation engine i.e. LocalNode and LocalSimulation
 	GetAddress() Address
 	GetState() NodeState
-	AddSubNode(Node)
-	RemoveSubNode(Address)
 	SendMessage(context.Context, Message, Address)
 	BroadcastMessage(context.Context, Message, []Address)
 	SetTimer(context.Context, Timer, time.Duration)
 	SendInterrupt(context.Context, Interrupt, Address)
 
-	// Private implementation specific functions
-	initSubNodes(context.Context)
-	findMessageHandler(context.Context, MessageTriplet) (handled bool)
-	findTimerHandler(context.Context, TimerTriplet) (handled bool)
-	findInterruptHandler(context.Context, InterruptTriplet) (handled bool)
-	handleInterrupt(context.Context, Interrupt, Address) (handled bool)
+	InitSubNodes(context.Context)
+	AddSubNode(Node)
+	RemoveSubNode(Address)
+	HandleInterrupt(context.Context, Interrupt, Address) (handled bool)
+	FindMessageHandler(context.Context, MessageTriplet) (handled bool)
+	FindTimerHandler(context.Context, TimerTriplet) (handled bool)
+	FindInterruptHandler(context.Context, InterruptTriplet) (handled bool)
 }
 
 // NodeState is a string that represents the state of a node.
@@ -47,7 +43,9 @@ const (
 
 // LocalNode implements most of the functions needed to satisfy the INode interface.
 //
-// It is designed to be used with LocalSimulation and should be used as a base for custom nodes.
+// The only functions that need to be implemented by a LocalNode are Init, HandleMessage and HandleTimer.
+//
+// It is designed to be used with a LocalSimulation.
 type LocalNode struct {
 	address  Address
 	sim      *LocalSimulation
@@ -55,7 +53,7 @@ type LocalNode struct {
 	state    NodeState
 }
 
-// NewLocalNode creates a new LocalNode.
+// NewLocalNode creates a new LocalNode with the given address.
 func NewLocalNode(sim *LocalSimulation, address Address) *LocalNode {
 	return &LocalNode{
 		address:  address,
@@ -86,8 +84,8 @@ func (n *LocalNode) RemoveSubNode(address Address) {
 	delete(n.subNodes, address)
 }
 
-// initSubNodes initializes all sub nodes of a node.
-func (n *LocalNode) initSubNodes(ctx context.Context) {
+// InitSubNodes initializes all sub nodes of a node.
+func (n *LocalNode) InitSubNodes(ctx context.Context) {
 	var wg sync.WaitGroup
 	for _, node := range n.subNodes {
 		wg.Add(1)
@@ -98,16 +96,16 @@ func (n *LocalNode) initSubNodes(ctx context.Context) {
 	wg.Wait()
 }
 
-// findMessageHandler finds the correct sub node to handle a message.
+// FindMessageHandler finds the correct sub node to handle a message.
 //
 // If the message is for the current sub node, the HandleMessage method is called.
 //
-// If the message is not for the current sub node, the findMessageHandler method is called recursively to check it's sub nodes for a match.
+// If the message is not for the current sub node, the FindMessageHandler method is called recursively to check it's sub nodes for a match.
 //
 // If no match is found or the matching node is not running, the message is dropped.
 //
 // If a match is found, and the message is handled successfully, the method returns true, otherwise it returns false.
-func (n *LocalNode) findMessageHandler(ctx context.Context, mt MessageTriplet) (handled bool) {
+func (n *LocalNode) FindMessageHandler(ctx context.Context, mt MessageTriplet) (handled bool) {
 	if node, ok := n.subNodes[mt.To]; ok {
 		return n.sim._handleMessage(ctx, node, mt)
 	}
@@ -115,7 +113,7 @@ func (n *LocalNode) findMessageHandler(ctx context.Context, mt MessageTriplet) (
 	for _, node := range n.subNodes {
 		wg.Add(1)
 		go func(_node Node) {
-			handled = handled || _node.findMessageHandler(ctx, mt)
+			handled = handled || _node.FindMessageHandler(ctx, mt)
 			wg.Done()
 		}(node)
 	}
@@ -123,16 +121,16 @@ func (n *LocalNode) findMessageHandler(ctx context.Context, mt MessageTriplet) (
 	return handled
 }
 
-// findTimerHandler finds the correct sub node to handle a timer.
+// FindTimerHandler finds the correct sub node to handle a timer.
 //
 // If the timer is for the current sub node, the HandleTimer method is called.
 //
-// If the timer is not for the current sub node, the findTimerHandler method is called recursively to check it's sub nodes for a match.
+// If the timer is not for the current sub node, the FindTimerHandler method is called recursively to check it's sub nodes for a match.
 //
 // If no match is found or the matching node is not running, the timer is dropped.
 //
 // If a match is found, and the timer is handled successfully, the method returns true, otherwise it returns false.
-func (n *LocalNode) findTimerHandler(ctx context.Context, tt TimerTriplet) (handled bool) {
+func (n *LocalNode) FindTimerHandler(ctx context.Context, tt TimerTriplet) (handled bool) {
 	if node, ok := n.subNodes[tt.To]; ok {
 		return n.sim._handleTimer(ctx, node, tt)
 	}
@@ -140,7 +138,7 @@ func (n *LocalNode) findTimerHandler(ctx context.Context, tt TimerTriplet) (hand
 	for _, node := range n.subNodes {
 		wg.Add(1)
 		go func(_node Node) {
-			handled = handled || _node.findTimerHandler(ctx, tt)
+			handled = handled || _node.FindTimerHandler(ctx, tt)
 			wg.Done()
 		}(node)
 	}
@@ -148,16 +146,16 @@ func (n *LocalNode) findTimerHandler(ctx context.Context, tt TimerTriplet) (hand
 	return handled
 }
 
-// findInterruptHandler handles an interrupt for all sub nodes.
+// FindInterruptHandler handles an interrupt for all sub nodes.
 //
 // If the interrupt is for the node, the HandleInterrupt method is called.
 //
-// If the interrupt is not for the node, the findInterruptHandler method is called recursively to check it's sub nodes for a match.
+// If the interrupt is not for the node, the FindInterruptHandler method is called recursively to check it's sub nodes for a match.
 //
 // If no match is found or the matching node is not running, the interrupt is dropped.
 //
 // If an unknown interrupt is received, the interrupt is dropped and the function returns false, otherwise true.
-func (n *LocalNode) findInterruptHandler(ctx context.Context, it InterruptTriplet) (handled bool) {
+func (n *LocalNode) FindInterruptHandler(ctx context.Context, it InterruptTriplet) (handled bool) {
 	if node, ok := n.subNodes[it.To]; ok {
 		return n.sim._handleInterrupt(ctx, node, it)
 	}
@@ -165,7 +163,7 @@ func (n *LocalNode) findInterruptHandler(ctx context.Context, it InterruptTriple
 	for _, node := range n.subNodes {
 		wg.Add(1)
 		go func(_node Node) {
-			handled = handled || _node.findInterruptHandler(ctx, it)
+			handled = handled || _node.FindInterruptHandler(ctx, it)
 			wg.Done()
 		}(node)
 	}
@@ -188,7 +186,7 @@ func (n *LocalNode) SendMessage(ctx context.Context, message Message, to Address
 		n.sim.LogSendMessage(n.address, to, message)
 		mt := MessageTriplet{message, n.address, to}
 		go func() {
-			if to.Root() != n.address.Root() {
+			if to.GetRoot() != n.address.GetRoot() {
 				time.Sleep(n.sim.randomLatency())
 			}
 			n.sim.messageQueue[mt.To] <- mt
@@ -250,7 +248,7 @@ func (n *LocalNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to A
 	}
 }
 
-// handleInterrupt handles an interrupt received by the node.
+// HandleInterrupt handles an interrupt received by the node.
 //
 // If the interrupt is a StopInterrupt, the node is stopped and cannot be started again.
 //
@@ -259,7 +257,7 @@ func (n *LocalNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to A
 // If the interrupt is a StartInterrupt, the node is resumed, usually after sleeping for a specified duration.
 //
 // If an unknown interrupt is received, the function returns false, otherwise true.
-func (n *LocalNode) handleInterrupt(ctx context.Context, interrupt Interrupt, from Address) bool {
+func (n *LocalNode) HandleInterrupt(ctx context.Context, interrupt Interrupt, from Address) bool {
 	switch interrupt.Type {
 	case StopInterrupt:
 		n.state = Stopped

@@ -12,7 +12,7 @@ import (
 // Each time an event occurs in the network, the corresponding Logger function is called.
 type Logger interface {
 	// Log functions for state changes
-	LogSimulationState(sim *LocalSimulation)
+	LogSimulationState(sim Simulation)
 	LogNodeState(node Node)
 
 	// Log functions for messages
@@ -53,8 +53,8 @@ func NewDebugLog(logPath string) *DebugLogger {
 }
 
 // LogSimulationState is called when the simulation state changes.
-func (l *DebugLogger) LogSimulationState(sim *LocalSimulation) {
-	l.logger.Printf("SimulationState(%v)\n", sim.state)
+func (l *DebugLogger) LogSimulationState(sim Simulation) {
+	l.logger.Printf("SimulationState(%v)\n", sim.GetState())
 }
 
 // LogNodeState is called when the state of a node changes.
@@ -130,8 +130,8 @@ func NewUmlLog(logPath string) *UmlLogger {
 }
 
 // LogSimulationState is called when the simulation state changes.
-func (l *UmlLogger) LogSimulationState(sim *LocalSimulation) {
-	switch sim.state {
+func (l *UmlLogger) LogSimulationState(sim Simulation) {
+	switch sim.GetState() {
 	case SimulationNotStarted:
 		l.logger.Println("@startuml")
 		l.logger.Println("!theme reddress-lightred")

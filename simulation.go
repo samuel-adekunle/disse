@@ -11,6 +11,7 @@ import (
 
 // Simulation is the interface that must be implemented by all simulations.
 type Simulation interface {
+	GetState() SimulationState
 	AddNode(Node)
 	RemoveNode(Address)
 	AddLogger(Logger)
@@ -89,7 +90,7 @@ func NewLocalSimulation(options *SimulationOptions) *LocalSimulation {
 			PlantumlPath: DefaultPlantumlPath,
 		}
 	}
-	return &LocalSimulation{
+	sim := &LocalSimulation{
 		options:        options,
 		wg:             &sync.WaitGroup{},
 		nodes:          make(map[Address]Node),
@@ -99,6 +100,20 @@ func NewLocalSimulation(options *SimulationOptions) *LocalSimulation {
 		loggers:        make([]Logger, 0),
 		state:          SimulationNotStarted,
 	}
+	debugLog := NewDebugLog(options.DebugLogPath)
+	if debugLog != nil {
+		sim.AddLogger(debugLog)
+	}
+	umlLog := NewUmlLog(options.UmlLogPath)
+	if umlLog != nil {
+		sim.AddLogger(umlLog)
+	}
+	return sim
+}
+
+// GetState returns the state of the simulation.
+func (s *LocalSimulation) GetState() SimulationState {
+	return s.state
 }
 
 // AddNode adds a node to the simulation.
@@ -156,15 +171,15 @@ func (s *LocalSimulation) _handleMessage(ctx context.Context, node Node, mt Mess
 //
 // If the message is successfully handled, true is returned, otherwise false.
 func (s *LocalSimulation) handleMessage(ctx context.Context, mt MessageTriplet) bool {
-	if _, ok := s.nodes[mt.To.Root()]; !ok {
+	if _, ok := s.nodes[mt.To.GetRoot()]; !ok {
 		return false
 	}
 
-	if mt.To == mt.To.Root() {
+	if mt.To == mt.To.GetRoot() {
 		return s._handleMessage(ctx, s.nodes[mt.To], mt)
 	}
 
-	return s.nodes[mt.To.Root()].findMessageHandler(ctx, mt)
+	return s.nodes[mt.To.GetRoot()].FindMessageHandler(ctx, mt)
 }
 
 // dropMessage drops a message.
@@ -195,15 +210,15 @@ func (s *LocalSimulation) _handleTimer(ctx context.Context, node Node, tt TimerT
 //
 // If the timer is successfully handled, true is returned, otherwise false.
 func (s *LocalSimulation) handleTimer(ctx context.Context, tt TimerTriplet) bool {
-	if _, ok := s.nodes[tt.To.Root()]; !ok {
+	if _, ok := s.nodes[tt.To.GetRoot()]; !ok {
 		return false
 	}
 
-	if tt.To == tt.To.Root() {
+	if tt.To == tt.To.GetRoot() {
 		return s._handleTimer(ctx, s.nodes[tt.To], tt)
 	}
 
-	return s.nodes[tt.To.Root()].findTimerHandler(ctx, tt)
+	return s.nodes[tt.To.GetRoot()].FindTimerHandler(ctx, tt)
 }
 
 // dropTimer drops a timer.
@@ -223,7 +238,7 @@ func (s *LocalSimulation) _handleInterrupt(ctx context.Context, node Node, it In
 		return false
 	}
 	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
-	handled = node.handleInterrupt(ctx, it.Interrupt, it.From)
+	handled = node.HandleInterrupt(ctx, it.Interrupt, it.From)
 	if handled {
 		s.LogNodeState(node)
 	}
@@ -238,15 +253,15 @@ func (s *LocalSimulation) _handleInterrupt(ctx context.Context, node Node, it In
 //
 // If an unknown interrupt is received, the interrupt is dropped and the function returns false, otherwise true.
 func (s *LocalSimulation) handleInterrupt(ctx context.Context, it InterruptTriplet) bool {
-	if _, ok := s.nodes[it.To.Root()]; !ok {
+	if _, ok := s.nodes[it.To.GetRoot()]; !ok {
 		return false
 	}
 
-	if it.To == it.To.Root() {
+	if it.To == it.To.GetRoot() {
 		return s._handleInterrupt(ctx, s.nodes[it.To], it)
 	}
 
-	return s.nodes[it.To.Root()].findInterruptHandler(ctx, it)
+	return s.nodes[it.To.GetRoot()].FindInterruptHandler(ctx, it)
 }
 
 // dropInterrupt drops an interrupt.
@@ -265,7 +280,7 @@ func (s *LocalSimulation) randomLatency() time.Duration {
 func (s *LocalSimulation) initNode(ctx context.Context, node Node) {
 	node.Init(ctx)
 	s.LogNodeState(node)
-	node.initSubNodes(ctx)
+	node.InitSubNodes(ctx)
 }
 
 // startSim starts the simulation by initializing all nodes and sub nodes.
@@ -311,17 +326,6 @@ func (s *LocalSimulation) stopSim() {
 func (s *LocalSimulation) Run() {
 	ctx, cancel := context.WithTimeout(context.Background(), s.options.Duration)
 	defer cancel()
-
-	debugLog := NewDebugLog(s.options.DebugLogPath)
-	if debugLog != nil {
-		s.AddLogger(debugLog)
-	}
-
-	umlLog := NewUmlLog(s.options.UmlLogPath)
-	if umlLog != nil {
-		s.AddLogger(umlLog)
-	}
-
 	s.startSim(ctx)
 	<-ctx.Done()
 	s.stopSim()

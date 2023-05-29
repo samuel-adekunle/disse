@@ -11,14 +11,14 @@ import "strings"
 // Subnodes can be used to reuse handlers and encapsulate logic.
 type Address string
 
-// Root returns the address of the root node.
-func (a Address) Root() Address {
+// GetRoot returns the address of the root node.
+func (a Address) GetRoot() Address {
 	return Address(strings.Split(string(a), ".")[0])
 }
 
-// SubAddress creates a new address by concatenating the current address with the given address.
+// NewSubAddress creates a new address by concatenating the current address with the given address.
 //
 // The new address is the address of a subnode of the node with the current address.
-func (a Address) SubAddress(address Address) Address {
+func (a Address) NewSubAddress(address Address) Address {
 	return a + "." + address
 }
