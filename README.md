@@ -1,4 +1,4 @@
-# DISSE: a toolkit for modelling and simulating distributed systems.
+# DISSE: a Toolkit for Modelling and Simulating Distributed Systems.
 
 DISSE is a new software library for modelling and simulating distributed systems. It is written in Golang and is open source and available on GitHub.
 

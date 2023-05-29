@@ -1,4 +1,4 @@
-# DISSE Library Examples
+# DISSE Examples
 
 This directory contains examples of how to use the library to create custom modules and run simulations.
 
