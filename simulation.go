@@ -100,13 +100,13 @@ func NewLocalSimulation(options *SimulationOptions) *LocalSimulation {
 		loggers:        make([]Logger, 0),
 		state:          SimulationNotStarted,
 	}
-	debugLog := NewDebugLog(options.DebugLogPath)
-	if debugLog != nil {
-		sim.AddLogger(debugLog)
+	debugLogger := NewDebugLogger(options.DebugLogPath)
+	if debugLogger != nil {
+		sim.AddLogger(debugLogger)
 	}
-	umlLog := NewUmlLog(options.UmlLogPath)
-	if umlLog != nil {
-		sim.AddLogger(umlLog)
+	umlLogger := NewUmlLogger(options.UmlLogPath)
+	if umlLogger != nil {
+		sim.AddLogger(umlLogger)
 	}
 	return sim
 }
@@ -119,6 +119,10 @@ func (s *LocalSimulation) GetState() SimulationState {
 // AddNode adds a node to the simulation.
 func (s *LocalSimulation) AddNode(node Node) {
 	address := node.GetAddress()
+	if _, ok := s.nodes[address]; ok {
+		fmt.Printf("Node with address %v already exists in simulation", address)
+		return
+	}
 	s.nodes[address] = node
 	s.messageQueue[address] = make(chan MessageTriplet, s.options.BufferSize)
 	s.timerQueue[address] = make(chan TimerTriplet, s.options.BufferSize)

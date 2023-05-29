@@ -11,21 +11,21 @@ import (
 //
 // Each time an event occurs in the network, the corresponding Logger function is called.
 type Logger interface {
-	// Log functions for state changes
+	// Logger functions for state changes
 	LogSimulationState(sim Simulation)
 	LogNodeState(node Node)
 
-	// Log functions for messages
+	// Logger functions for messages
 	LogSendMessage(from, to Address, message Message)
 	LogHandleMessage(from, to Address, message Message)
 	LogDropMessage(from, to Address, message Message)
 
-	// Log functions for timers
+	// Logger functions for timers
 	LogSetTimer(to Address, timer Timer, duration time.Duration)
 	LogHandleTimer(to Address, timer Timer, duration time.Duration)
 	LogDropTimer(to Address, timer Timer, duration time.Duration)
 
-	// Log functions for interrupts
+	// Logger functions for interrupts
 	LogSendInterrupt(from, to Address, interrupt Interrupt)
 	LogHandleInterrupt(from, to Address, interrupt Interrupt)
 	LogDropInterrupt(from, to Address, interrupt Interrupt)
@@ -36,8 +36,8 @@ type DebugLogger struct {
 	logger *log.Logger
 }
 
-// NewDebugLog creates a new DebugLog that logs to the given file.
-func NewDebugLog(logPath string) *DebugLogger {
+// NewDebugLogger creates a new DebugLog that logs to the given file.
+func NewDebugLogger(logPath string) *DebugLogger {
 	const (
 		prefix = ""
 		flag   = log.Ldate | log.Lmicroseconds
@@ -112,8 +112,8 @@ type UmlLogger struct {
 	logger *log.Logger
 }
 
-// NewUmlLog creates a new UmlLog that logs to the given file.
-func NewUmlLog(logPath string) *UmlLogger {
+// NewUmlLogger creates a new UmlLog that logs to the given file.
+func NewUmlLogger(logPath string) *UmlLogger {
 	const (
 		prefix = ""
 		flag   = 0
