@@ -12,7 +12,9 @@ import (
 // Simulation is the interface that must be implemented by all simulations.
 type Simulation interface {
 	GetState() SimulationState
-	AddNode(Node)
+	GetOptions() LocalSimulationOptions
+	GetNodes() map[Address]Node
+	AddNode(Node) error
 	RemoveNode(Address)
 	AddLogger(Logger)
 	RemoveLogger(Logger)
@@ -31,8 +33,8 @@ const (
 	SimulationFinished SimulationState = "Finished"
 )
 
-// SimulationOptions is used to set the options for the simulation.
-type SimulationOptions struct {
+// LocalSimulationOptions is used to set the options for the simulation.
+type LocalSimulationOptions struct {
 	MinLatency   time.Duration
 	MaxLatency   time.Duration
 	Duration     time.Duration
@@ -45,7 +47,7 @@ type SimulationOptions struct {
 
 const (
 	// DefaultBufferSize is the default buffer size for the message queue.
-	DefaultBufferSize = 20
+	DefaultBufferSize = 10
 	// DefaultMinLatency is the default minimum latency for messages.
 	DefaultMinLatency = 10 * time.Millisecond
 	// DefaultMaxLatency is the default maximum latency for messages.
@@ -57,14 +59,14 @@ const (
 	// DefaultUmlLogPath is the default path to the UML log.
 	DefaultUmlLogPath = "uml.log"
 	// DefaultJavaPath is the default path to the java executable.
-	DefaultJavaPath = ""
+	DefaultJavaPath = "/usr/bin/java"
 	// DefaultPlantumlPath is the default path to the plantuml jar file.
-	DefaultPlantumlPath = ""
+	DefaultPlantumlPath = "/usr/share/plantuml/plantuml.jar"
 )
 
 // LocalSimulation sets up and runs the distributed system simulation locally using shared memory.
 type LocalSimulation struct {
-	options        *SimulationOptions
+	options        *LocalSimulationOptions
 	nodes          map[Address]Node
 	wg             *sync.WaitGroup
 	messageQueue   map[Address]chan MessageTriplet
@@ -77,9 +79,9 @@ type LocalSimulation struct {
 // NewLocalSimulation creates a new simulation with the given options.
 //
 // If the options are nil, the default options are used.
-func NewLocalSimulation(options *SimulationOptions) *LocalSimulation {
+func NewLocalSimulation(options *LocalSimulationOptions) *LocalSimulation {
 	if options == nil {
-		options = &SimulationOptions{
+		options = &LocalSimulationOptions{
 			MinLatency:   DefaultMinLatency,
 			MaxLatency:   DefaultMaxLatency,
 			Duration:     DefaultDuration,
@@ -100,14 +102,10 @@ func NewLocalSimulation(options *SimulationOptions) *LocalSimulation {
 		loggers:        make([]Logger, 0),
 		state:          SimulationNotStarted,
 	}
-	debugLog := NewDebugLog(options.DebugLogPath)
-	if debugLog != nil {
-		sim.AddLogger(debugLog)
-	}
-	umlLog := NewUmlLog(options.UmlLogPath)
-	if umlLog != nil {
-		sim.AddLogger(umlLog)
-	}
+	debugLogger, _ := NewDebugLogger(options.DebugLogPath)
+	sim.AddLogger(debugLogger)
+	umlLogger, _ := NewUmlLogger(options.UmlLogPath)
+	sim.AddLogger(umlLogger)
 	return sim
 }
 
@@ -116,13 +114,27 @@ func (s *LocalSimulation) GetState() SimulationState {
 	return s.state
 }
 
+// GetOptions returns the options of the simulation.
+func (s *LocalSimulation) GetOptions() LocalSimulationOptions {
+	return *s.options
+}
+
+// GetNodes returns the nodes in the simulation.
+func (s *LocalSimulation) GetNodes() map[Address]Node {
+	return s.nodes
+}
+
 // AddNode adds a node to the simulation.
-func (s *LocalSimulation) AddNode(node Node) {
+func (s *LocalSimulation) AddNode(node Node) error {
 	address := node.GetAddress()
+	if _, ok := s.nodes[address]; ok {
+		return fmt.Errorf("node with address %v already exists in simulation", address)
+	}
 	s.nodes[address] = node
 	s.messageQueue[address] = make(chan MessageTriplet, s.options.BufferSize)
 	s.timerQueue[address] = make(chan TimerTriplet, s.options.BufferSize)
 	s.interruptQueue[address] = make(chan InterruptTriplet, s.options.BufferSize)
+	return nil
 }
 
 // RemoveNode removes a node from the simulation.
@@ -151,35 +163,30 @@ func (s *LocalSimulation) RemoveLogger(logger Logger) {
 // handleMessages handles a message once the appropriate node is found.
 //
 // If the node is not running, the message is dropped.
-//
-// If the message is successfully handled, true is returned, otherwise false.
 func (s *LocalSimulation) _handleMessage(ctx context.Context, node Node, mt MessageTriplet) bool {
 	if node.GetState() != Running {
 		return false
 	}
-	s.LogHandleMessage(mt.From, mt.To, mt.Message)
 	return node.HandleMessage(ctx, mt.Message, mt.From)
 }
 
 // handleMessage handles a message by sending it to the appropriate node.
 //
 // If the root node does not exist, the message is dropped.
-//
-// If the node is not running, the message is dropped.
-//
-// If the address does not match the root node, the sub nodes are checked recursively for a match.
-//
-// If the message is successfully handled, true is returned, otherwise false.
 func (s *LocalSimulation) handleMessage(ctx context.Context, mt MessageTriplet) bool {
-	if _, ok := s.nodes[mt.To.GetRoot()]; !ok {
+	if _, ok := s.nodes[mt.To]; !ok {
 		return false
 	}
-
-	if mt.To == mt.To.GetRoot() {
-		return s._handleMessage(ctx, s.nodes[mt.To], mt)
+	s.LogHandleMessage(mt.From, mt.To, mt.Message)
+	if s._handleMessage(ctx, s.nodes[mt.To], mt) {
+		return true
 	}
-
-	return s.nodes[mt.To.GetRoot()].FindMessageHandler(ctx, mt)
+	for _, node := range s.nodes[mt.To].GetSubNodes() {
+		if s._handleMessage(ctx, node, mt) {
+			return true
+		}
+	}
+	return false
 }
 
 // dropMessage drops a message.
@@ -192,33 +199,30 @@ func (s *LocalSimulation) dropMessage(ctx context.Context, mt MessageTriplet) {
 // _handleTimer handles a timer once the appropriate node is found.
 //
 // If the node is not running, the timer is dropped.
-//
-// If the timer is successfully handled, true is returned, otherwise false.
 func (s *LocalSimulation) _handleTimer(ctx context.Context, node Node, tt TimerTriplet) bool {
 	if node.GetState() != Running {
 		return false
 	}
-	s.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
 	return node.HandleTimer(ctx, tt.Timer, tt.Duration)
 }
 
 // handleTimer handles a timer by sending it to the appropriate node.
 //
-// If the node is not running, the timer is dropped.
-//
-// If the address does not match the root node, the sub nodes are checked recursively for a match.
-//
-// If the timer is successfully handled, true is returned, otherwise false.
+// If the node does not exist, the timer is dropped.
 func (s *LocalSimulation) handleTimer(ctx context.Context, tt TimerTriplet) bool {
-	if _, ok := s.nodes[tt.To.GetRoot()]; !ok {
+	if _, ok := s.nodes[tt.To]; !ok {
 		return false
 	}
-
-	if tt.To == tt.To.GetRoot() {
-		return s._handleTimer(ctx, s.nodes[tt.To], tt)
+	s.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
+	if s._handleTimer(ctx, s.nodes[tt.To], tt) {
+		return true
 	}
-
-	return s.nodes[tt.To.GetRoot()].FindTimerHandler(ctx, tt)
+	for _, node := range s.nodes[tt.To].GetSubNodes() {
+		if s._handleTimer(ctx, node, tt) {
+			return true
+		}
+	}
+	return false
 }
 
 // dropTimer drops a timer.
@@ -230,38 +234,33 @@ func (s *LocalSimulation) dropTimer(ctx context.Context, tt TimerTriplet) {
 
 // _handleInterrupt handles an interrupt once the appropriate node is found.
 //
-// If the node is not running, the interrupt is dropped.
-//
-// If the interrupt is successfully handled, true is returned, otherwise false.
-func (s *LocalSimulation) _handleInterrupt(ctx context.Context, node Node, it InterruptTriplet) (handled bool) {
+// If the node is not running, the interrupt is dropped..
+func (s *LocalSimulation) _handleInterrupt(ctx context.Context, node Node, it InterruptTriplet) bool {
 	if node.GetState() != Running {
 		return false
 	}
-	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
-	handled = node.HandleInterrupt(ctx, it.Interrupt, it.From)
-	if handled {
-		s.LogNodeState(node)
-	}
-	return handled
+	return node.HandleInterrupt(ctx, it.Interrupt, it.From)
 }
 
 // handleInterrupt handles an interrupt by sending it to the appropriate node.
 //
-// If the node is not running, the interrupt is dropped.
-//
-// If the address does not match the root node, the sub nodes are checked recursively for a match.
-//
-// If an unknown interrupt is received, the interrupt is dropped and the function returns false, otherwise true.
+// If the node does not exist, the interrupt is dropped.
 func (s *LocalSimulation) handleInterrupt(ctx context.Context, it InterruptTriplet) bool {
-	if _, ok := s.nodes[it.To.GetRoot()]; !ok {
+	if _, ok := s.nodes[it.To]; !ok {
 		return false
 	}
-
-	if it.To == it.To.GetRoot() {
-		return s._handleInterrupt(ctx, s.nodes[it.To], it)
+	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
+	if s._handleInterrupt(ctx, s.nodes[it.To], it) {
+		s.LogNodeState(s.nodes[it.To])
+		return true
 	}
-
-	return s.nodes[it.To.GetRoot()].FindInterruptHandler(ctx, it)
+	for _, node := range s.nodes[it.To].GetSubNodes() {
+		if s._handleInterrupt(ctx, node, it) {
+			s.LogNodeState(node)
+			return true
+		}
+	}
+	return false
 }
 
 // dropInterrupt drops an interrupt.
@@ -280,7 +279,9 @@ func (s *LocalSimulation) randomLatency() time.Duration {
 func (s *LocalSimulation) initNode(ctx context.Context, node Node) {
 	node.Init(ctx)
 	s.LogNodeState(node)
-	node.InitSubNodes(ctx)
+	for _, subNode := range node.GetSubNodes() {
+		s.initNode(ctx, subNode)
+	}
 }
 
 // startSim starts the simulation by initializing all nodes and sub nodes.
@@ -333,22 +334,21 @@ func (s *LocalSimulation) Run() {
 }
 
 // generateUmlImage generates a UML image of the simulation using PlantUML (requires java).
-func (s *LocalSimulation) generateUmlImage() {
+func (s *LocalSimulation) generateUmlImage() error {
 	javaPath := s.options.JavaPath
 	plantumlPath := s.options.PlantumlPath
 	if javaPath == "" || plantumlPath == "" {
-		fmt.Println("javaPath or plantumlPath not set. UML image not generated.")
-		return
+		return fmt.Errorf("javaPath or plantumlPath not set. UML image not generated")
 	}
 
 	if s.options.UmlLogPath == "" {
-		fmt.Println("umlLogPath not set. UML image not generated.")
-		return
+		return fmt.Errorf("umlLogPath not set. UML image not generated")
 	}
 
 	cmd := exec.Command(javaPath, "-jar", plantumlPath, s.options.UmlLogPath)
 	err := cmd.Run()
 	if err != nil {
-		fmt.Printf("Error %v when generating UML image. Check if javaPath, plantumlPath and umlLogPath.\n", err)
+		return err
 	}
+	return nil
 }

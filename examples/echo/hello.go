@@ -51,7 +51,7 @@ func (n *HelloNode) HandleTimer(ctx context.Context, timer ds.Timer, length time
 	switch timer.Type {
 	case HelloTimer:
 		echoSendMessage := ds.NewMessage(EchoSend, EchoSendData{
-			Message: ds.NewMessage(Hello, HelloData("Hello")),
+			Message: ds.NewMessage(Hello, HelloData("Hello DISSE!")),
 		})
 		n.SendMessage(ctx, echoSendMessage, n.echoNode)
 		n.setHelloTimer(ctx, 1*time.Second)
