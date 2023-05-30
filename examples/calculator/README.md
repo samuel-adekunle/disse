@@ -2,7 +2,7 @@
 
 This example demonstrates how to use node composition to reuse handlers and design nodes in a modular way.
 
-The calculator node is composed of an adder node and a multiplier node. Both are subnodes and cannot be accessed directly by other nodes.
+The calculator node has an adder subnode, which itself has a multiplier subnode. Both subnodes cannot be accessed directly by other nodes as all other nodes are oblivious to the existence of the subnodes.
 
 When handling a message, the simulation checks if the root node can handle the message. If it cannot, it iterates through the subnodes and checks if they can handle the message. The first subnode that can handle the message is used to handle the message and the simulation stops searching for a handler.
 
