@@ -7,23 +7,23 @@ import (
 func main() {
 	sim := ds.NewLocalSimulation(nil)
 
-	adderAddress := ds.Address("calculator.adder")
+	calculatorAddress := ds.Address("calculator")
+	adderAddress := calculatorAddress.NewSubAddress("adder")
+	multiplierAddress := adderAddress.NewSubAddress("multiplier")
+
 	adderNode := &AdderNode{
 		LocalNode: ds.NewLocalNode(sim, adderAddress),
 	}
-
-	multiplierAddress := ds.Address("calculator.adder.multiplier")
 	multiplierNode := &MultiplierNode{
 		LocalNode: ds.NewLocalNode(sim, multiplierAddress),
 	}
-
-	calculatorAddress := ds.Address("calculator")
 	calculatorNode := &CalculatorNode{
 		LocalNode: ds.NewLocalNode(sim, calculatorAddress),
 	}
+
 	sim.AddNode(calculatorNode)
-	calculatorNode.AddSubNode(adderNode)
 	adderNode.AddSubNode(multiplierNode)
+	calculatorNode.AddSubNode(adderNode)
 
 	testAddress := ds.Address("test")
 	testNode := &TestNode{

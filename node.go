@@ -76,10 +76,15 @@ func (n *LocalNode) GetSubNodes() map[Address]Node {
 }
 
 // AddSubNode adds a sub node to the node.
+//
+// Parent nodes need to be added to the simulation before adding sub nodes.
 func (n *LocalNode) AddSubNode(node Node) error {
 	address := node.GetAddress()
 	if _, ok := n.subNodes[address]; ok {
 		return fmt.Errorf("node with address %s already exists", address)
+	}
+	if _, ok := n.sim.nodes[address.GetRoot()]; !ok {
+		return fmt.Errorf("node with address %s does not exist", address.GetRoot())
 	}
 	n.subNodes[address] = node
 	return nil
@@ -103,12 +108,13 @@ func (n *LocalNode) SendMessage(ctx context.Context, message Message, to Address
 		if err := n.validateNode(to); err != nil {
 			return err
 		}
-		n.sim.LogSendMessage(n.address, to, message)
+		from := n.address.GetRoot()
+		n.sim.LogSendMessage(from, to, message)
 		go func() {
 			if to != n.address {
 				time.Sleep(n.randomLatency())
 			}
-			n.sim.messageQueue[to] <- MessageTriplet{message, n.address, to}
+			n.sim.messageQueue[to] <- MessageTriplet{message, from, to}
 		}()
 		return nil
 	}
@@ -149,10 +155,11 @@ func (n *LocalNode) SetTimer(ctx context.Context, timer Timer, duration time.Dur
 		if err := n.validateNode(n.address); err != nil {
 			return err
 		}
-		n.sim.LogSetTimer(n.address, timer, duration)
+		from := n.address.GetRoot()
+		n.sim.LogSetTimer(from, timer, duration)
 		go func() {
 			time.Sleep(duration)
-			n.sim.timerQueue[n.address] <- TimerTriplet{timer, n.address, duration}
+			n.sim.timerQueue[n.address] <- TimerTriplet{timer, from, duration}
 		}()
 		return nil
 	}
@@ -171,9 +178,10 @@ func (n *LocalNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to A
 		if err := n.validateNode(to); err != nil {
 			return err
 		}
-		n.sim.LogSendInterrupt(n.address, to, interrupt)
+		from := n.address.GetRoot()
+		n.sim.LogSendInterrupt(from, to, interrupt)
 		go func() {
-			n.sim.interruptQueue[to] <- InterruptTriplet{interrupt, n.address, to}
+			n.sim.interruptQueue[to] <- InterruptTriplet{interrupt, from, to}
 		}()
 		return nil
 	}

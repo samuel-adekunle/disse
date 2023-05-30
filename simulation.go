@@ -3,6 +3,7 @@ package disse
 import (
 	"context"
 	"fmt"
+	"log"
 	"os/exec"
 	"sync"
 	"time"
@@ -99,10 +100,21 @@ func NewLocalSimulation(options *LocalSimulationOptions) *LocalSimulation {
 		loggers:        make([]Logger, 0),
 		state:          SimulationNotStarted,
 	}
-	debugLogger, _ := NewDebugLogger(options.DebugLogPath)
-	sim.AddLogger(debugLogger)
-	umlLogger, _ := NewUmlLogger(options.UmlLogPath)
-	sim.AddLogger(umlLogger)
+
+	debugLogger, err := NewDebugLogger(options.DebugLogPath)
+	if err != nil {
+		log.Println("failed to create debug logger:", err)
+	} else {
+		sim.AddLogger(debugLogger)
+	}
+
+	umlLogger, err := NewUmlLogger(options.UmlLogPath)
+	if err != nil {
+		log.Println("failed to create UML logger:", err)
+	} else {
+		sim.AddLogger(umlLogger)
+	}
+
 	return sim
 }
 
@@ -154,7 +166,10 @@ func (s *LocalSimulation) Run() {
 	s.startSim(ctx)
 	<-ctx.Done()
 	s.stopSim()
-	s.generateUmlImage()
+	err := s.generateUmlImage()
+	if err != nil {
+		log.Println("failed to generate UML image:", err)
+	}
 }
 
 // initNode initializes a node and all it's sub nodes.
