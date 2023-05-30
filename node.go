@@ -83,8 +83,8 @@ func (n *LocalNode) AddSubNode(node Node) error {
 	if _, ok := n.subNodes[address]; ok {
 		return fmt.Errorf("node with address %s already exists", address)
 	}
-	if _, ok := n.sim.nodes[address.GetRoot()]; !ok {
-		return fmt.Errorf("node with address %s does not exist", address.GetRoot())
+	if err := n.validateNode(address.GetRoot()); err != nil {
+		return err
 	}
 	n.subNodes[address] = node
 	return nil
@@ -111,7 +111,7 @@ func (n *LocalNode) SendMessage(ctx context.Context, message Message, to Address
 		from := n.address.GetRoot()
 		n.sim.LogSendMessage(from, to, message)
 		go func() {
-			if to != n.address {
+			if to != from {
 				time.Sleep(n.randomLatency())
 			}
 			n.sim.messageQueue[to] <- MessageTriplet{message, from, to}
@@ -152,14 +152,15 @@ func (n *LocalNode) SetTimer(ctx context.Context, timer Timer, duration time.Dur
 	case <-ctx.Done():
 		return nil
 	default:
-		if err := n.validateNode(n.address); err != nil {
+		to := n.address.GetRoot()
+		if err := n.validateNode(to); err != nil {
 			return err
 		}
-		from := n.address.GetRoot()
-		n.sim.LogSetTimer(from, timer, duration)
+		from := to
+		n.sim.LogSetTimer(to, timer, duration)
 		go func() {
 			time.Sleep(duration)
-			n.sim.timerQueue[n.address] <- TimerTriplet{timer, from, duration}
+			n.sim.timerQueue[to] <- TimerTriplet{timer, from, duration}
 		}()
 		return nil
 	}
@@ -212,13 +213,10 @@ func (n *LocalNode) randomLatency() time.Duration {
 	return s.options.MinLatency + time.Duration(rand.Int63n(int64(s.options.MaxLatency-s.options.MinLatency)))
 }
 
-// validateNode checks if the node exists and is running.
+// validateNode checks if the node exists in the simulation.
 func (n *LocalNode) validateNode(address Address) error {
 	if _, ok := n.sim.nodes[address]; !ok {
 		return fmt.Errorf("node with address %s does not exist", address)
-	}
-	if n.sim.nodes[address].GetState() != Running {
-		return fmt.Errorf("node with address %s is not running", address)
 	}
 	return nil
 }

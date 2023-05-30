@@ -256,9 +256,14 @@ func (s *LocalSimulation) _handleMessage(ctx context.Context, node Node, message
 
 // handleMessage handles a message by recursively searching a node
 // and it's sub nodes for a handler for the message.
+//
+// If the node is not running, or no handler is found, the message is dropped.
 func (s *LocalSimulation) handleMessage(ctx context.Context, mt MessageTriplet) bool {
-	s.LogHandleMessage(mt.From, mt.To, mt.Message)
 	node := s.nodes[mt.To]
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleMessage(mt.From, mt.To, mt.Message)
 	return s._handleMessage(ctx, node, mt.Message, mt.From)
 }
 
@@ -284,9 +289,14 @@ func (s *LocalSimulation) _handleTimer(ctx context.Context, node Node, timer Tim
 }
 
 // handleTimer handles a timer by sending it to the appropriate node.
+//
+// If the node is not running, or no handler is found, the timer is dropped.
 func (s *LocalSimulation) handleTimer(ctx context.Context, tt TimerTriplet) bool {
-	s.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
 	node := s.nodes[tt.To]
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
 	return s._handleTimer(ctx, node, tt.Timer, tt.Duration)
 }
 
@@ -312,9 +322,14 @@ func (s *LocalSimulation) _handleInterrupt(ctx context.Context, node Node, inter
 }
 
 // handleInterrupt handles an interrupt by sending it to the appropriate node.
+//
+// If the node is not running, or no handler is found, the interrupt is dropped.
 func (s *LocalSimulation) handleInterrupt(ctx context.Context, it InterruptTriplet) bool {
-	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
 	node := s.nodes[it.To]
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
 	return s._handleInterrupt(ctx, node, it.Interrupt, it.From)
 }
 
