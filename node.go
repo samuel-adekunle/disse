@@ -3,6 +3,7 @@ package disse
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 )
 
@@ -75,7 +76,7 @@ func (n *LocalNode) GetSubNodes() map[Address]Node {
 }
 
 // AddSubNode adds a sub node to the node.
-func (n *LocalNode) AddSubNode(node Node) (err error) {
+func (n *LocalNode) AddSubNode(node Node) error {
 	address := node.GetAddress()
 	if _, ok := n.subNodes[address]; ok {
 		return fmt.Errorf("node with address %s already exists", address)
@@ -105,7 +106,7 @@ func (n *LocalNode) SendMessage(ctx context.Context, message Message, to Address
 		n.sim.LogSendMessage(n.address, to, message)
 		go func() {
 			if to != n.address {
-				time.Sleep(n.sim.randomLatency())
+				time.Sleep(n.randomLatency())
 			}
 			n.sim.messageQueue[to] <- MessageTriplet{message, n.address, to}
 		}()
@@ -195,6 +196,12 @@ func (n *LocalNode) HandleInterrupt(ctx context.Context, interrupt Interrupt, fr
 	default:
 		return false
 	}
+}
+
+// randomLatency returns a random duration between the minimum and maximum latency.
+func (n *LocalNode) randomLatency() time.Duration {
+	s := n.sim
+	return s.options.MinLatency + time.Duration(rand.Int63n(int64(s.options.MaxLatency-s.options.MinLatency)))
 }
 
 // validateNode checks if the node exists and is running.

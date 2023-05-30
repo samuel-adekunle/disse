@@ -12,7 +12,7 @@ func main() {
 		LocalNode: ds.NewLocalNode(sim, adderAddress),
 	}
 
-	multiplierAddress := ds.Address("calculator.multiplier")
+	multiplierAddress := ds.Address("calculator.adder.multiplier")
 	multiplierNode := &MultiplierNode{
 		LocalNode: ds.NewLocalNode(sim, multiplierAddress),
 	}
@@ -21,9 +21,9 @@ func main() {
 	calculatorNode := &CalculatorNode{
 		LocalNode: ds.NewLocalNode(sim, calculatorAddress),
 	}
-	calculatorNode.AddSubNode(adderNode)
-	calculatorNode.AddSubNode(multiplierNode)
 	sim.AddNode(calculatorNode)
+	calculatorNode.AddSubNode(adderNode)
+	adderNode.AddSubNode(multiplierNode)
 
 	testAddress := ds.Address("test")
 	testNode := &TestNode{
