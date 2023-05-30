@@ -17,7 +17,6 @@ type InterruptType string
 
 const (
 	StopInterrupt  InterruptType = "StopInterrupt"
-	StartInterrupt InterruptType = "StartInterrupt"
 	SleepInterrupt InterruptType = "SleepInterrupt"
 )
 
