@@ -3,23 +3,11 @@ package disse
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"log"
 	"os/exec"
 	"sync"
 	"time"
 )
-
-// Simulation is the interface that must be implemented by all simulations.
-type Simulation interface {
-	GetState() SimulationState
-	GetOptions() LocalSimulationOptions
-	GetNodes() map[Address]Node
-	AddNode(Node) error
-	RemoveNode(Address)
-	AddLogger(Logger)
-	RemoveLogger(Logger)
-	Run()
-}
 
 // SimulationState is the state of the simulation.
 type SimulationState string
@@ -32,6 +20,16 @@ const (
 	// SimulationStateFinished is the state of the simulation after it is finished.
 	SimulationFinished SimulationState = "Finished"
 )
+
+// Simulation is the interface that must be implemented by all simulations.
+type Simulation interface {
+	GetState() SimulationState
+	AddNode(Node) error
+	RemoveNode(Address)
+	AddLogger(Logger)
+	RemoveLogger(Logger)
+	Run()
+}
 
 // LocalSimulationOptions is used to set the options for the simulation.
 type LocalSimulationOptions struct {
@@ -102,26 +100,27 @@ func NewLocalSimulation(options *LocalSimulationOptions) *LocalSimulation {
 		loggers:        make([]Logger, 0),
 		state:          SimulationNotStarted,
 	}
-	debugLogger, _ := NewDebugLogger(options.DebugLogPath)
-	sim.AddLogger(debugLogger)
-	umlLogger, _ := NewUmlLogger(options.UmlLogPath)
-	sim.AddLogger(umlLogger)
+
+	debugLogger, err := NewDebugLogger(options.DebugLogPath)
+	if err != nil {
+		log.Println("failed to create debug logger:", err)
+	} else {
+		sim.AddLogger(debugLogger)
+	}
+
+	umlLogger, err := NewUmlLogger(options.UmlLogPath)
+	if err != nil {
+		log.Println("failed to create UML logger:", err)
+	} else {
+		sim.AddLogger(umlLogger)
+	}
+
 	return sim
 }
 
 // GetState returns the state of the simulation.
 func (s *LocalSimulation) GetState() SimulationState {
 	return s.state
-}
-
-// GetOptions returns the options of the simulation.
-func (s *LocalSimulation) GetOptions() LocalSimulationOptions {
-	return *s.options
-}
-
-// GetNodes returns the nodes in the simulation.
-func (s *LocalSimulation) GetNodes() map[Address]Node {
-	return s.nodes
 }
 
 // AddNode adds a node to the simulation.
@@ -160,119 +159,17 @@ func (s *LocalSimulation) RemoveLogger(logger Logger) {
 	}
 }
 
-// handleMessages handles a message once the appropriate node is found.
-//
-// If the node is not running, the message is dropped.
-func (s *LocalSimulation) _handleMessage(ctx context.Context, node Node, mt MessageTriplet) bool {
-	if node.GetState() != Running {
-		return false
+// Run runs the simulation.
+func (s *LocalSimulation) Run() {
+	ctx, cancel := context.WithTimeout(context.Background(), s.options.Duration)
+	defer cancel()
+	s.startSim(ctx)
+	<-ctx.Done()
+	s.stopSim()
+	err := s.generateUmlImage()
+	if err != nil {
+		log.Println("failed to generate UML image:", err)
 	}
-	return node.HandleMessage(ctx, mt.Message, mt.From)
-}
-
-// handleMessage handles a message by sending it to the appropriate node.
-//
-// If the root node does not exist, the message is dropped.
-func (s *LocalSimulation) handleMessage(ctx context.Context, mt MessageTriplet) bool {
-	if _, ok := s.nodes[mt.To]; !ok {
-		return false
-	}
-	s.LogHandleMessage(mt.From, mt.To, mt.Message)
-	if s._handleMessage(ctx, s.nodes[mt.To], mt) {
-		return true
-	}
-	for _, node := range s.nodes[mt.To].GetSubNodes() {
-		if s._handleMessage(ctx, node, mt) {
-			return true
-		}
-	}
-	return false
-}
-
-// dropMessage drops a message.
-//
-// This means the message is not handled by any node.
-func (s *LocalSimulation) dropMessage(ctx context.Context, mt MessageTriplet) {
-	s.LogDropMessage(mt.From, mt.To, mt.Message)
-}
-
-// _handleTimer handles a timer once the appropriate node is found.
-//
-// If the node is not running, the timer is dropped.
-func (s *LocalSimulation) _handleTimer(ctx context.Context, node Node, tt TimerTriplet) bool {
-	if node.GetState() != Running {
-		return false
-	}
-	return node.HandleTimer(ctx, tt.Timer, tt.Duration)
-}
-
-// handleTimer handles a timer by sending it to the appropriate node.
-//
-// If the node does not exist, the timer is dropped.
-func (s *LocalSimulation) handleTimer(ctx context.Context, tt TimerTriplet) bool {
-	if _, ok := s.nodes[tt.To]; !ok {
-		return false
-	}
-	s.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
-	if s._handleTimer(ctx, s.nodes[tt.To], tt) {
-		return true
-	}
-	for _, node := range s.nodes[tt.To].GetSubNodes() {
-		if s._handleTimer(ctx, node, tt) {
-			return true
-		}
-	}
-	return false
-}
-
-// dropTimer drops a timer.
-//
-// This means the timer is not handled by any node.
-func (s *LocalSimulation) dropTimer(ctx context.Context, tt TimerTriplet) {
-	s.LogDropTimer(tt.To, tt.Timer, tt.Duration)
-}
-
-// _handleInterrupt handles an interrupt once the appropriate node is found.
-//
-// If the node is not running, the interrupt is dropped..
-func (s *LocalSimulation) _handleInterrupt(ctx context.Context, node Node, it InterruptTriplet) bool {
-	if node.GetState() != Running {
-		return false
-	}
-	return node.HandleInterrupt(ctx, it.Interrupt, it.From)
-}
-
-// handleInterrupt handles an interrupt by sending it to the appropriate node.
-//
-// If the node does not exist, the interrupt is dropped.
-func (s *LocalSimulation) handleInterrupt(ctx context.Context, it InterruptTriplet) bool {
-	if _, ok := s.nodes[it.To]; !ok {
-		return false
-	}
-	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
-	if s._handleInterrupt(ctx, s.nodes[it.To], it) {
-		s.LogNodeState(s.nodes[it.To])
-		return true
-	}
-	for _, node := range s.nodes[it.To].GetSubNodes() {
-		if s._handleInterrupt(ctx, node, it) {
-			s.LogNodeState(node)
-			return true
-		}
-	}
-	return false
-}
-
-// dropInterrupt drops an interrupt.
-//
-// This means the interrupt is not handled by any node.
-func (s *LocalSimulation) dropInterrupt(ctx context.Context, it InterruptTriplet) {
-	s.LogDropInterrupt(it.From, it.To, it.Interrupt)
-}
-
-// randomLatency returns a random duration between the minimum and maximum latency.
-func (s *LocalSimulation) randomLatency() time.Duration {
-	return s.options.MinLatency + time.Duration(rand.Int63n(int64(s.options.MaxLatency-s.options.MinLatency)))
 }
 
 // initNode initializes a node and all it's sub nodes.
@@ -307,6 +204,8 @@ func (s *LocalSimulation) startSim(ctx context.Context) {
 				case it := <-s.interruptQueue[_node]:
 					if handled := s.handleInterrupt(ctx, it); !handled {
 						s.dropInterrupt(ctx, it)
+					} else {
+						s.LogNodeState(s.nodes[_node])
 					}
 				}
 			}
@@ -323,16 +222,6 @@ func (s *LocalSimulation) stopSim() {
 	s.LogSimulationState()
 }
 
-// Run runs the simulation.
-func (s *LocalSimulation) Run() {
-	ctx, cancel := context.WithTimeout(context.Background(), s.options.Duration)
-	defer cancel()
-	s.startSim(ctx)
-	<-ctx.Done()
-	s.stopSim()
-	s.generateUmlImage()
-}
-
 // generateUmlImage generates a UML image of the simulation using PlantUML (requires java).
 func (s *LocalSimulation) generateUmlImage() error {
 	javaPath := s.options.JavaPath
@@ -340,15 +229,113 @@ func (s *LocalSimulation) generateUmlImage() error {
 	if javaPath == "" || plantumlPath == "" {
 		return fmt.Errorf("javaPath or plantumlPath not set. UML image not generated")
 	}
-
 	if s.options.UmlLogPath == "" {
 		return fmt.Errorf("umlLogPath not set. UML image not generated")
 	}
-
 	cmd := exec.Command(javaPath, "-jar", plantumlPath, s.options.UmlLogPath)
 	err := cmd.Run()
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// _handleMessage is a helper function for handleMessage.
+func (s *LocalSimulation) _handleMessage(ctx context.Context, node Node, message Message, from Address) bool {
+	if node.HandleMessage(ctx, message, from) {
+		return true
+	}
+	subNodes := node.GetSubNodes()
+	for _, subNode := range subNodes {
+		if s._handleMessage(ctx, subNode, message, from) {
+			return true
+		}
+	}
+	return false
+}
+
+// handleMessage handles a message by recursively searching a node
+// and it's sub nodes for a handler for the message.
+//
+// If the node is not running, or no handler is found, the message is dropped.
+func (s *LocalSimulation) handleMessage(ctx context.Context, mt MessageTriplet) bool {
+	node := s.nodes[mt.To]
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleMessage(mt.From, mt.To, mt.Message)
+	return s._handleMessage(ctx, node, mt.Message, mt.From)
+}
+
+// dropMessage drops a message.
+//
+// This means the message is not handled by any node.
+func (s *LocalSimulation) dropMessage(ctx context.Context, mt MessageTriplet) {
+	s.LogDropMessage(mt.From, mt.To, mt.Message)
+}
+
+// _handleTimer is a helper function for handleTimer.
+func (s *LocalSimulation) _handleTimer(ctx context.Context, node Node, timer Timer, duration time.Duration) bool {
+	if node.HandleTimer(ctx, timer, duration) {
+		return true
+	}
+	subNodes := node.GetSubNodes()
+	for _, subNode := range subNodes {
+		if s._handleTimer(ctx, subNode, timer, duration) {
+			return true
+		}
+	}
+	return false
+}
+
+// handleTimer handles a timer by sending it to the appropriate node.
+//
+// If the node is not running, or no handler is found, the timer is dropped.
+func (s *LocalSimulation) handleTimer(ctx context.Context, tt TimerTriplet) bool {
+	node := s.nodes[tt.To]
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleTimer(tt.To, tt.Timer, tt.Duration)
+	return s._handleTimer(ctx, node, tt.Timer, tt.Duration)
+}
+
+// dropTimer drops a timer.
+//
+// This means the timer is not handled by any node.
+func (s *LocalSimulation) dropTimer(ctx context.Context, tt TimerTriplet) {
+	s.LogDropTimer(tt.To, tt.Timer, tt.Duration)
+}
+
+// _handleInterrupt is a helper function for handleInterrupt.
+func (s *LocalSimulation) _handleInterrupt(ctx context.Context, node Node, interrupt Interrupt, from Address) bool {
+	if node.HandleInterrupt(ctx, interrupt, from) {
+		return true
+	}
+	subNodes := node.GetSubNodes()
+	for _, subNode := range subNodes {
+		if s._handleInterrupt(ctx, subNode, interrupt, from) {
+			return true
+		}
+	}
+	return false
+}
+
+// handleInterrupt handles an interrupt by sending it to the appropriate node.
+//
+// If the node is not running, or no handler is found, the interrupt is dropped.
+func (s *LocalSimulation) handleInterrupt(ctx context.Context, it InterruptTriplet) bool {
+	node := s.nodes[it.To]
+	if node.GetState() != Running {
+		return false
+	}
+	s.LogHandleInterrupt(it.From, it.To, it.Interrupt)
+	return s._handleInterrupt(ctx, node, it.Interrupt, it.From)
+}
+
+// dropInterrupt drops an interrupt.
+//
+// This means the interrupt is not handled by any node.
+func (s *LocalSimulation) dropInterrupt(ctx context.Context, it InterruptTriplet) {
+	s.LogDropInterrupt(it.From, it.To, it.Interrupt)
 }
