@@ -6,24 +6,6 @@ import (
 	"time"
 )
 
-// Node is the interface that must be implemented by all nodes in the distributed system.
-type Node interface {
-	Init(context.Context)
-	HandleMessage(context.Context, Message, Address) (handled bool)
-	HandleTimer(context.Context, Timer, time.Duration) (handled bool)
-	GetAddress() Address
-	GetState() NodeState
-	SendMessage(context.Context, Message, Address)
-	BroadcastMessage(context.Context, Message, []Address)
-	SetTimer(context.Context, Timer, time.Duration)
-	SendInterrupt(context.Context, Interrupt, Address)
-
-	GetSubNodes() map[Address]Node
-	AddSubNode(Node) error
-	RemoveSubNode(Address)
-	HandleInterrupt(context.Context, Interrupt, Address) (handled bool)
-}
-
 // NodeState is a string that represents the state of a node.
 //
 // It can be either Stopped, Running or Sleeping.
@@ -37,6 +19,23 @@ const (
 	// Stopped is the state of a node that is stopped.
 	Stopped NodeState = "Stopped"
 )
+
+// Node is the interface that must be implemented by all nodes in the distributed system.
+type Node interface {
+	Init(context.Context)
+	GetAddress() Address
+	GetState() NodeState
+	GetSubNodes() map[Address]Node
+	AddSubNode(Node) error
+	RemoveSubNode(Address)
+	SendMessage(context.Context, Message, Address) error
+	BroadcastMessage(context.Context, Message, []Address) error
+	SetTimer(context.Context, Timer, time.Duration) error
+	SendInterrupt(context.Context, Interrupt, Address) error
+	HandleMessage(context.Context, Message, Address) (handled bool)
+	HandleTimer(context.Context, Timer, time.Duration) (handled bool)
+	HandleInterrupt(context.Context, Interrupt, Address) (handled bool)
+}
 
 // LocalNode implements most of the functions needed to satisfy the INode interface.
 //
@@ -93,65 +92,89 @@ func (n *LocalNode) RemoveSubNode(address Address) {
 // SendMessage sends a message to another node in the simulation.
 //
 // A random amount of latency will be added to the message if the sender and receiver are not the same node.
-func (n *LocalNode) SendMessage(ctx context.Context, message Message, to Address) {
+//
+// If the destination node is not valid, an error is returned.
+func (n *LocalNode) SendMessage(ctx context.Context, message Message, to Address) error {
 	select {
 	case <-ctx.Done():
-		return
+		return nil
 	default:
+		if err := n.validateNode(to); err != nil {
+			return err
+		}
 		n.sim.LogSendMessage(n.address, to, message)
-		mt := MessageTriplet{message, n.address, to}
 		go func() {
 			if to != n.address {
 				time.Sleep(n.sim.randomLatency())
 			}
-			n.sim.messageQueue[mt.To] <- mt
+			n.sim.messageQueue[to] <- MessageTriplet{message, n.address, to}
 		}()
+		return nil
 	}
 }
 
 // BroadcastMessage sends a message to multiple nodes in the simulation.
 //
 // See SendMessage for more details on how the message is sent.
-func (n *LocalNode) BroadcastMessage(ctx context.Context, message Message, to []Address) {
+//
+// If any of the destination nodes  are not valid, an error is returned.
+func (n *LocalNode) BroadcastMessage(ctx context.Context, message Message, to []Address) error {
 	select {
 	case <-ctx.Done():
-		return
+		return nil
 	default:
+		for _, address := range to {
+			if err := n.validateNode(address); err != nil {
+				return err
+			}
+		}
 		for _, address := range to {
 			n.SendMessage(ctx, message, address)
 		}
+		return nil
 	}
 }
 
 // SetTimer sets a timer for the node.
 //
 // The timer is added to the timer queue of the node after the given duration.
-func (n *LocalNode) SetTimer(ctx context.Context, timer Timer, duration time.Duration) {
+//
+// If the destination node is not valid, an error is returned.
+func (n *LocalNode) SetTimer(ctx context.Context, timer Timer, duration time.Duration) error {
 	select {
 	case <-ctx.Done():
-		return
+		return nil
 	default:
+		if err := n.validateNode(n.address); err != nil {
+			return err
+		}
 		n.sim.LogSetTimer(n.address, timer, duration)
 		go func() {
 			time.Sleep(duration)
 			n.sim.timerQueue[n.address] <- TimerTriplet{timer, n.address, duration}
 		}()
+		return nil
 	}
 }
 
 // SendInterrupt sends an interrupt to another node in the simulation.
 //
 // Interrupts are always immediately added to the interrupt queue of the destination node.
-func (n *LocalNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to Address) {
+//
+// If the destination node does is not valid, an error is returned.
+func (n *LocalNode) SendInterrupt(ctx context.Context, interrupt Interrupt, to Address) error {
 	select {
 	case <-ctx.Done():
-		return
+		return nil
 	default:
+		if err := n.validateNode(to); err != nil {
+			return err
+		}
 		n.sim.LogSendInterrupt(n.address, to, interrupt)
-		it := InterruptTriplet{interrupt, n.address, to}
 		go func() {
-			n.sim.interruptQueue[it.To] <- it
+			n.sim.interruptQueue[to] <- InterruptTriplet{interrupt, n.address, to}
 		}()
+		return nil
 	}
 }
 
@@ -166,14 +189,21 @@ func (n *LocalNode) HandleInterrupt(ctx context.Context, interrupt Interrupt, fr
 		n.state = Sleeping
 		go func() {
 			<-time.After(data.Duration)
-			startInterrupt := NewInterrupt(StartInterrupt, nil)
-			n.SendInterrupt(ctx, startInterrupt, n.address)
+			n.state = Running
 		}()
-		return true
-	case StartInterrupt:
-		n.state = Running
 		return true
 	default:
 		return false
 	}
+}
+
+// validateNode checks if the node exists and is running.
+func (n *LocalNode) validateNode(address Address) error {
+	if _, ok := n.sim.nodes[address]; !ok {
+		return fmt.Errorf("node with address %s does not exist", address)
+	}
+	if n.sim.nodes[address].GetState() != Running {
+		return fmt.Errorf("node with address %s is not running", address)
+	}
+	return nil
 }
