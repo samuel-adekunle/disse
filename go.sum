@@ -1,2 +1,4 @@
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
 github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/samuel-adekunle/disse/lib v0.0.0-20230530163542-fcbf09f944d1 h1:7rI1DE/cUbW5VDxmTmvfE9MJSU5W0axSRobdVxy/4Pk=
+github.com/samuel-adekunle/disse/lib v0.0.0-20230530163542-fcbf09f944d1/go.mod h1:nq4yx10iriHH+WIZjfeAXAxPAQE/BywYISFEZGpFYM4=
