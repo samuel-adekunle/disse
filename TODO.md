@@ -1,4 +1,5 @@
 # Future Work
+- [ ] Change Interrupts to also send across the netowrk, might not be realistic to send across networks
 - [ ] Make Address an empty interface and use a LocalAddress type for LocalNode and LocalSimulation
 - [ ] Make LocalNode fully implement the Node interface
 - [ ] Design a language agnostic way to specify simulations, using a JSON or YAML file
