@@ -7,4 +7,6 @@
 - [ ] Add more examples of how to use the framework
 - [ ] Add more modules to the standard library
 - [ ] Design a model checking framework to test if an algorithm is implemented correctly
-- [ ] Add a Restart Interrupt
+- [ ] Add a Restart Interrupt, and figure out how to design simulations where nodes can leave and rejoin at will
+- [ ] Give Nodes persistent storage
+- [ ] Implement custom timer libraries to enable interactive simulation where users can pause and play simulatino and inspect the state of nodes, i.e. a true debugger, perhaps with breakpoints.
