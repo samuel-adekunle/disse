@@ -1,4 +1,5 @@
 # Future Work
+- [ ] Change Interrupts to also send across the netowrk, might not be realistic to send across networks
 - [ ] Make Address an empty interface and use a LocalAddress type for LocalNode and LocalSimulation
 - [ ] Make LocalNode fully implement the Node interface
 - [ ] Design a language agnostic way to specify simulations, using a JSON or YAML file
@@ -7,4 +8,6 @@
 - [ ] Add more examples of how to use the framework
 - [ ] Add more modules to the standard library
 - [ ] Design a model checking framework to test if an algorithm is implemented correctly
-- [ ] Create a custom timer to allow for more accurate simulation of time and enable interactive simulations
+- [ ] Add a Restart Interrupt, and figure out how to design simulations where nodes can leave and rejoin at will
+- [ ] Give Nodes persistent storage
+- [ ] Implement custom timer libraries to enable interactive simulation where users can pause and play simulatino and inspect the state of nodes, i.e. a true debugger, perhaps with breakpoints.
