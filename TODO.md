@@ -7,3 +7,4 @@
 - [ ] Add more examples of how to use the framework
 - [ ] Add more modules to the standard library
 - [ ] Design a model checking framework to test if an algorithm is implemented correctly
+- [ ] Create a custom timer to allow for more accurate simulation of time and enable interactive simulations
