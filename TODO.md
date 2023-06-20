@@ -11,3 +11,6 @@
 - [ ] Add a Restart Interrupt, and figure out how to design simulations where nodes can leave and rejoin at will
 - [ ] Give Nodes persistent storage
 - [ ] Implement custom timer libraries to enable interactive simulation where users can pause and play simulatino and inspect the state of nodes, i.e. a true debugger, perhaps with breakpoints.
+- [ ] Custom Visualsation not requiring Java or Plantuml
+- [ ] Visual editor for simulation that also utilises some language agnostic specification language like XML, JSON or YAML
+- [ ] assumptions like fail-arbitrary processes and fully asynchronous message passing
